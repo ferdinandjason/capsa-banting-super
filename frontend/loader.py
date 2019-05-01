@@ -1,27 +1,100 @@
 import os
 import pygame
 
+class Image:
+    def __init__(self):
+        self.sprite = ''
+        self.pos = {
+            'x' : 0,
+            'y' : 0
+        }
+
+    def position(self):
+        return (self.pos['x'], self.pos['y'])
+
+class Card(Image):
+    def __init__(self, types, number, sprite):
+        Image.__init__(self)
+        self.type = types
+        self.number = number
+        self.sprite = sprite
+        self.select = False
+        self.ongoing = False
+
+    def __lt__(self, other):
+        if self.number != other.number:
+            return self.number < other.number
+        else :
+            return self.type < other.type
+    
+class Button(Image):
+    def __init__(self, name, sprite_non_pressed, sprite_pressed, sprite_disabled):
+        Image.__init__(self)
+        self.name = name
+        self.sprite = [sprite_non_pressed, sprite_pressed, sprite_disabled]
+        self.index = 0
+
+    def get_sprite(self):
+        return self.sprite[self.index]
+
 class CardLoader:
     def __init__(self):
-        self.PATH = './assets'
-        self.cards = {
-            'clover' : [0]*14,
-            'diamond' : [0]*14,
-            'heart' : [0]*14,
-            'spade' : [0]*14,
-        }
+        self.PATH = './assets/card'
+        self.card_dict = {
+            'clover' : [0]*13,
+            'diamond' : [0]*13,
+            'heart' : [0]*13,
+            'spade' : [0]*13,
+        } 
 
     def load(self):
         for root, dirs, files in os.walk(self.PATH):
             card_image_path = [os.path.join(root, file) for file in files]
             self.load_image_path(card_image_path)
-        return self.cards
+        self.flatten(self.card_dict)
+        return self
 
     def load_image_path(self, paths):
         for path in paths: 
             card_type = path.split('_')[2][:-4]
             card_number = int(path.split('_')[1])
+            card_value = card_number
             card_sprite = pygame.image.load(path).convert()
-            self.cards[card_type][card_number] = card_sprite
+            if card_value == 1 : card_value = 14
+            if card_value == 2 : card_value = 15
+            self.card_dict[card_type][card_number-1] = Card(card_type, card_value, card_sprite)
 
-    
+    def flatten(self, card_dict):
+        self.card = self.card_dict['diamond'] + self.card_dict['clover'] + self.card_dict['heart'] + self.card_dict['spade']
+
+
+class BackgroundLoader:
+    def __init__(self):
+        self.PATH = './assets/background.jpg'
+
+    def load(self):
+        self.background = pygame.image.load(self.PATH).convert()
+        return self
+
+class ButtonLoader:
+    def __init__(self):
+        self.PATH = './assets/button'
+        self.button_dict = {}
+        self.button = {}
+
+    def load(self):
+        for root, dirs, files in os.walk(self.PATH):
+            button_image_path = [os.path.join(root, file) for file in files]
+            self.load_image_path(button_image_path)
+        self.load_button()
+        return self
+
+    def load_image_path(self, paths):
+        for path in paths: 
+            button_name = path.split(os.sep)[-1].split('.')[0]
+            self.button_dict[button_name] = pygame.image.load(path).convert()
+
+    def load_button(self):
+        print(self.button_dict)
+        self.button['play'] = Button('play', self.button_dict['play'], self.button_dict['play-pressed'], self.button_dict['play-disabled'])
+        self.button['pass'] = Button('pass', self.button_dict['pass'], self.button_dict['pass-pressed'], self.button_dict['pass-disabled'])
