@@ -1,7 +1,12 @@
 import os
 import pygame
 
-class Image:
+"""
+class BaseImage :
+    sprite  : pygame.Surface
+    position: dict {'x','y}
+"""
+class BaseImage:
     def __init__(self):
         self.sprite = ''
         self.pos = {
@@ -12,9 +17,18 @@ class Image:
     def position(self):
         return (self.pos['x'], self.pos['y'])
 
-class Card(Image):
+
+"""
+class Card:
+    type    : clover, diamond, heart, spade
+    number  : 1 , 2, ..., 13
+    sprite  : pygame.Surface
+    select  : boolean True or False
+    ongoing : boolean True or False
+"""
+class Card(BaseImage):
     def __init__(self, types, number, sprite):
-        Image.__init__(self)
+        BaseImage.__init__(self)
         self.type = types
         self.number = number
         self.sprite = sprite
@@ -26,10 +40,19 @@ class Card(Image):
             return self.number < other.number
         else :
             return self.type < other.type
-    
-class Button(Image):
+
+"""
+class Button :
+    name    : button image
+    sprite  : array of pygame.Surface object
+    index   : 
+        0   -> clickable
+        1   -> clicked
+        2   -> disabled
+"""
+class Button(BaseImage):
     def __init__(self, name, sprite_non_pressed, sprite_pressed, sprite_disabled):
-        Image.__init__(self)
+        BaseImage.__init__(self)
         self.name = name
         self.sprite = [sprite_non_pressed, sprite_pressed, sprite_disabled]
         self.index = 0
@@ -37,9 +60,16 @@ class Button(Image):
     def get_sprite(self):
         return self.sprite[self.index]
 
+
+"""
+class CardLoader :
+    PATH        : path to the folder
+    card_dict   : dictionary to save card
+    card        : array contain flatten card_dict
+"""
 class CardLoader:
     def __init__(self):
-        self.PATH = './assets/card'
+        self.PATH = os.path.join('.','assets','card')
         self.card_dict = {
             'clover' : [0]*13,
             'diamond' : [0]*13,
@@ -67,18 +97,28 @@ class CardLoader:
     def flatten(self, card_dict):
         self.card = self.card_dict['diamond'] + self.card_dict['clover'] + self.card_dict['heart'] + self.card_dict['spade']
 
-
+"""
+class BackgroundLoader :
+    PATH        : path to the image
+    background  : pygame.Surface object
+"""
 class BackgroundLoader:
     def __init__(self):
-        self.PATH = './assets/background.jpg'
+        self.PATH = os.path.join('.','assets','background.jpg')
 
     def load(self):
         self.background = pygame.image.load(self.PATH).convert()
         return self
 
+"""
+class ButtonLoader :
+    PATH        : path to the folder
+    button_dict : dictionary to save image
+    button      : dictionary to map between button name and button sprite
+"""
 class ButtonLoader:
     def __init__(self):
-        self.PATH = './assets/button'
+        self.PATH = os.path.join('.','assets','button')
         self.button_dict = {}
         self.button = {}
 
