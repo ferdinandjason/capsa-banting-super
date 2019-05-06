@@ -138,3 +138,6 @@ class ButtonLoader:
         print(self.button_dict)
         self.button['play'] = Button('play', self.button_dict['play'], self.button_dict['play-pressed'], self.button_dict['play-disabled'])
         self.button['pass'] = Button('pass', self.button_dict['pass'], self.button_dict['pass-pressed'], self.button_dict['pass-disabled'])
+        self.button['pair'] = Button('pair', self.button_dict['pair'], self.button_dict['pair-pressed'], self.button_dict['pair-disabled'])
+        self.button['trice'] = Button('trice', self.button_dict['trice'], self.button_dict['trice-pressed'], self.button_dict['trice-disabled'])
+        self.button['full-house'] = Button('full-house', self.button_dict['full-house'], self.button_dict['full-house-pressed'], self.button_dict['full-house-disabled'])
