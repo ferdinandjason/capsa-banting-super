@@ -1,1 +1,1 @@
-# capsa-banting-super
+# Capsa Banting
