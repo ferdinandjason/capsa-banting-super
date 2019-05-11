@@ -3,8 +3,10 @@ import copy
 import random
 import pygame
 import itertools
+import threading
 
 from factory import *
+from network import *
 
 class GameRule:
     def __init__(self, cards):
@@ -106,8 +108,6 @@ class GameRule:
                             index_four.append([value[0], value[1], value[2], value[3], index_card])
                             point_four.append(self.calculate_point(3, self.cards[value[0]].number, 'four-of-a-kind'))
 
-
-
             if key <= 11 :
                 straight_exist = True
                 for straight_key in range(key, key+5):
@@ -181,9 +181,11 @@ class GameRule:
         self.combo_point['four-of-a-kind'] = point_four
         self.combo_point['full-house'] = point_full_house
             
+THREAD_RUNNING = True
 
 class Game:
     def __init__(self):
+        self.server = Network()
         self.SCREEN_RESOLUTION = (1280, 720)
         self.CAPTION = "Capsa Banting Super"
 
@@ -212,12 +214,13 @@ class Game:
         self.button_factory.button['play'].index = 2
 
     def start(self):
+        global THREAD_RUNNING
         # TODO: get player card index from server
         # shallow copy
         self.player_card = copy.copy(self.card_factory.card[:13])
         self.player_card.sort()
-        choosen_card = []
-        choosen_card_before = []
+        self.choosen_card = []
+        self.choosen_card_before = []
         counter_button = {
             'pair' : 0,
             'trice' : 0,
@@ -236,6 +239,9 @@ class Game:
 
         point_now = 0
 
+        self.thread_server = threading.Thread(target=self.get_data_from_server)
+        self.thread_server.start()
+
         while True:
 
             game_rule = GameRule(self.player_card)
@@ -246,6 +252,9 @@ class Game:
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    THREAD_RUNNING = False
+                    self.server.server_socket.send(str.encode('OUT'))
+                    self.thread_server.join()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_x, mouse_y = event.pos
@@ -284,20 +293,20 @@ class Game:
                         center_position_y = 360
                         
                         counter_card = 0
-                        choosen_card_before = copy.copy(choosen_card)
-                        choosen_card = []
+                        self.choosen_card_before = copy.copy(self.choosen_card)
+                        self.choosen_card = []
                         choosen_card_index = []
                         for card in self.player_card:
                             if card.select :
                                 counter_card += 1
-                                choosen_card.append(card)
+                                self.choosen_card.append(card)
                                 choosen_card_index.append(self.player_card.index(card))
 
                         if counter_card == 1:
                             point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(card.type), card.number, 'single')
                             print(point_now)
 
-                        for card in choosen_card:
+                        for card in self.choosen_card:
                             self.player_card.remove(card)
 
                         self.CARD_SELECTED_BEFORE = self.CARD_SELECTED
@@ -313,13 +322,13 @@ class Game:
                         center_position_y -= bounding_box_card_y // 2
 
                         for i in range(counter_card):
-                            choosen_card[i].pos['y'] = center_position_y
-                            choosen_card[i].pos['x'] = center_position_x + i * ( choosen_card[i].sprite.get_width() + PADDING ) 
-                            print(choosen_card[i].position())
+                            self.choosen_card[i].pos['y'] = center_position_y
+                            self.choosen_card[i].pos['x'] = center_position_x + i * ( self.choosen_card[i].sprite.get_width() + PADDING ) 
+                            print(self.choosen_card[i].position())
 
-                        print(len(choosen_card_before), self.CARD_SELECTED_BEFORE)
+                        print(len(self.choosen_card_before), self.CARD_SELECTED_BEFORE)
                         for i in range(self.CARD_SELECTED_BEFORE):
-                            choosen_card_before[i].pos['y'] -= choosen_card_before[i].sprite.get_height() + PADDING_BEFORE
+                            self.choosen_card_before[i].pos['y'] -= self.choosen_card_before[i].sprite.get_height() + PADDING_BEFORE
 
                         self.button_factory.button['play'].index = 2
 
@@ -355,6 +364,15 @@ class Game:
             self.set_asset_position()
             self.draw()
             pygame.display.update()
+
+    def get_data_from_server(self):
+        global THREAD_RUNNING
+        while THREAD_RUNNING :
+            print(THREAD_RUNNING)
+            message = self.server.server_socket.recv(self.server.BUFFER_SIZE).decode()
+            if message:
+                print(message)
+
 
     def set_asset_position(self):
         # TODO: make a function for set initial position
@@ -404,10 +422,10 @@ class Game:
             self.screen.blit(self.player_card[i].sprite, self.player_card[i].position())
 
         for i in range(self.CARD_SELECTED):
-            self.screen.blit(choosen_card[i].sprite, choosen_card[i].position())
+            self.screen.blit(self.choosen_card[i].sprite, self.choosen_card[i].position())
 
         for i in range(self.CARD_SELECTED_BEFORE):
-            self.screen.blit(choosen_card_before[i].sprite, choosen_card_before[i].position())
+            self.screen.blit(self.choosen_card_before[i].sprite, self.choosen_card_before[i].position())
 
 
 

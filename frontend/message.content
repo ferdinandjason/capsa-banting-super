@@ -1,0 +1,43 @@
+[
+    {
+        "status" : "UPDATE",
+        "data" : {
+            "id" : 1,
+            "play" : "pass/play",
+            "selected_card" : [],
+            "selected_card_point" : 1
+        }
+    },
+    {
+        "status" : "OK",
+        "data" : {
+            "player_id" : 1,
+            "card_index_before" : [],
+            "card_point_before" : -1,
+            "card_index_now" : [],
+            "card_point_now" : 0,
+            "player" : {
+                "0" : {
+                    "player_sequence" : [0,1,2,3],
+                    "card_index" : [],
+                    "card_count" : 4
+                },
+                "1" : {
+                    "player_sequence" : [1,0,2,3],
+                    "card_index" : [],
+                    "card_count" : 4
+                },
+                "2" : {
+                    "player_sequence" : [2,0,1,3],
+                    "card_index" : [],
+                    "card_count" : 4
+                },
+                "3" : {
+                    "player_sequence" : [3,0,1,2],
+                    "card_index" : [],
+                    "card_count" : 4
+                }
+            }
+        }
+    }
+]
