@@ -16,6 +16,11 @@ class BaseImage:
 
     def position(self):
         return (self.pos['x'], self.pos['y'])
+    
+    def set_position(self, x, y):
+        self.pos['x'] = x
+        self.pos['y'] = y
+
 
 
 """
@@ -62,12 +67,12 @@ class Button(BaseImage):
 
 
 """
-class CardLoader :
+class CardFactory :
     PATH        : path to the folder
     card_dict   : dictionary to save card
     card        : array contain flatten card_dict
 """
-class CardLoader:
+class CardFactory:
     def __init__(self):
         self.PATH = os.path.join('.','assets','card')
         self.card_dict = {
@@ -98,11 +103,11 @@ class CardLoader:
         self.card = self.card_dict['diamond'] + self.card_dict['clover'] + self.card_dict['heart'] + self.card_dict['spade']
 
 """
-class BackgroundLoader :
+class BackgroundFactory :
     PATH        : path to the image
     background  : pygame.Surface object
 """
-class BackgroundLoader:
+class BackgroundFactory:
     def __init__(self):
         self.PATH = os.path.join('.','assets','background.jpg')
 
@@ -111,12 +116,12 @@ class BackgroundLoader:
         return self
 
 """
-class ButtonLoader :
+class ButtonFactory :
     PATH        : path to the folder
     button_dict : dictionary to save image
     button      : dictionary to map between button name and button sprite
 """
-class ButtonLoader:
+class ButtonFactory:
     def __init__(self):
         self.PATH = os.path.join('.','assets','button')
         self.button_dict = {}
@@ -146,7 +151,7 @@ class ButtonLoader:
         self.button['four-of-a-kind'] = Button('four-of-a-kind', self.button_dict['four-of-a-kind'], self.button_dict['four-of-a-kind-pressed'], self.button_dict['four-of-a-kind-disabled'])
         self.button['full-house'] = Button('full-house', self.button_dict['full-house'], self.button_dict['full-house-pressed'], self.button_dict['full-house-disabled'])
 
-class BackCardLoader:
+class BackCardFactory:
     def __init__(self):
         self.PATH = os.path.join('.','assets','card_back.png')
 
