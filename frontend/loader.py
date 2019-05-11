@@ -133,6 +133,7 @@ class ButtonLoader:
         for path in paths: 
             button_name = path.split(os.sep)[-1].split('.')[0]
             self.button_dict[button_name] = pygame.image.load(path).convert()
+            self.button_dict[button_name] = pygame.transform.scale(self.button_dict[button_name], (70,40))
 
     def load_button(self):
         print(self.button_dict)
@@ -140,4 +141,15 @@ class ButtonLoader:
         self.button['pass'] = Button('pass', self.button_dict['pass'], self.button_dict['pass-pressed'], self.button_dict['pass-disabled'])
         self.button['pair'] = Button('pair', self.button_dict['pair'], self.button_dict['pair-pressed'], self.button_dict['pair-disabled'])
         self.button['trice'] = Button('trice', self.button_dict['trice'], self.button_dict['trice-pressed'], self.button_dict['trice-disabled'])
+        self.button['straight'] = Button('straight', self.button_dict['straight'], self.button_dict['straight-pressed'], self.button_dict['straight-disabled'])
+        self.button['flush'] = Button('flush', self.button_dict['flush'], self.button_dict['flush-pressed'], self.button_dict['flush-disabled'])
+        self.button['four-of-a-kind'] = Button('four-of-a-kind', self.button_dict['four-of-a-kind'], self.button_dict['four-of-a-kind-pressed'], self.button_dict['four-of-a-kind-disabled'])
         self.button['full-house'] = Button('full-house', self.button_dict['full-house'], self.button_dict['full-house-pressed'], self.button_dict['full-house-disabled'])
+
+class BackCardLoader:
+    def __init__(self):
+        self.PATH = os.path.join('.','assets','card_back.png')
+
+    def load(self):
+        self.backcard = pygame.image.load(self.PATH).convert_alpha()
+        return self
