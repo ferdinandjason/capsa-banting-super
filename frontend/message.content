@@ -16,6 +16,7 @@
             "card_point_before" : -1,
             "card_index_now" : [],
             "card_point_now" : 0,
+            "current_player_id" : 1,
             "player" : {
                 "0" : {
                     "player_sequence" : [0,1,2,3],
