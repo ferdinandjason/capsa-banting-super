@@ -120,6 +120,15 @@ class GameRule:
                 if point > self.point_before :
                     index_trice.append([value[0], value[1], value[2]])
                     point_trice.append(point)
+            elif len(value) == 3 and (self.card_combo == 2 or self.card_combo == -1):
+                trice = [value[0], value[1], value[2]]
+                for i in [[0,1], [0,2], [1,2]]:
+                    largest_type = max(self.card_type_sequence.index(self.cards[trice[i[0]]].type), self.card_type_sequence.index(self.cards[trice[i[1]]].type))
+                    point = self.calculate_point(largest_type, self.cards[trice[i[0]]].number, 'pair')
+                    if point > self.point_before:
+                        point_pair.append(point)
+                        index_pair.append([trice[i[0]], trice[i[1]]])
+
             elif len(value) == 4  and (self.card_combo == 5 or self.card_combo == -1):
                 for index in range(3,16):
                     if index != key and len(self.card_counter[index]) != 4:
@@ -128,6 +137,16 @@ class GameRule:
                             if point > self.point_before :
                                 index_four.append([value[0], value[1], value[2], value[3], index_card])
                                 point_four.append(point)
+
+            elif len(value) == 4 and (self.card_combo == 2 or self.card_combo == -1):
+                four = [value[0], value[1], value[2], value[3]]
+                for i in [[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]]:
+                    largest_type = max(self.card_type_sequence.index(self.cards[four[i[0]]].type), self.card_type_sequence.index(self.cards[trice[i[1]]].type))
+                    point = self.calculate_point(largest_type, self.cards[four[i[0]]].number, 'pair')
+                    if point > self.point_before:
+                        point_pair.append(point)
+                        index_pair.append([four[i[0]], four[i[1]]])
+
 
             if key <= 11 and (self.card_combo == 5 or self.card_combo == -1):
                 straight_exist = True
@@ -194,28 +213,6 @@ class GameRule:
                     if point > self.point_before:
                         index_full_house.append([pair[0], pair[1], trice[0], trice[1], trice[2]])
                         point_full_house.append(point)
-
-        
-        
-        for trice in index_trice:
-            if (self.card_combo == 2 or self.card_combo == -1):
-                largest_type = max(self.card_type_sequence.index(self.cards[trice[0]].type), self.card_type_sequence.index(self.cards[trice[1]].type))
-                point = self.calculate_point(largest_type, self.cards[trice[0]].number, 'pair')
-                if point > self.point_before:
-                    point_pair.append(point)
-                    index_pair.append([trice[0], trice[1]])
-
-                largest_type = max(self.card_type_sequence.index(self.cards[trice[0]].type), self.card_type_sequence.index(self.cards[trice[2]].type))
-                point = self.calculate_point(largest_type, self.cards[trice[0]].number, 'pair')
-                if point > self.point_before:
-                    point_pair.append(point)
-                    index_pair.append([trice[0], trice[2]])
-
-                largest_type = max(self.card_type_sequence.index(self.cards[trice[1]].type), self.card_type_sequence.index(self.cards[trice[2]].type))
-                point = self.calculate_point(largest_type, self.cards[trice[1]].number, 'pair')
-                if point > self.point_before:
-                    point_pair.append(point)
-                    index_pair.append([trice[1], trice[2]])
 
         self.combo['pair'] = index_pair
         self.combo['trice'] = index_trice
@@ -312,6 +309,7 @@ class Game:
         while True:
 
             game_rule = GameRule(self.player_card, self.card_point_before)
+            self.card_point_before = game_rule.point_before
 
             for combo_name in self.combo_list:
                 if len(game_rule.combo[combo_name]) == 0 :
@@ -352,7 +350,7 @@ class Game:
 
                     if counter_card == 1:
                         point = game_rule.calculate_point(game_rule.card_type_sequence.index(last_card.type), last_card.number, 'single')
-                        if point > self.point_before:
+                        if point > self.card_point_before:
                             self.button_factory.button['play'].index = 0
                         else :
                             self.button_factory.button['play'].index = 2
@@ -388,6 +386,12 @@ class Game:
                         self.server.send(self.STATUS_UPDATE, data)
 
                         self.button_factory.button['play'].index = 2
+
+                    if self.button_factory.button['pass'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['pass'].pos['x'], mouse_y - self.button_factory.button['pass'].pos['y']) and self.button_factory.button['pass'].index != 2:
+                        data = {}
+                        data['id'] = self.id
+                        data['play'] = 'PASS'
+                        self.server.send(self.STATUS_UPDATE, data)
 
                     for combo_name in self.combo_list:
                         if len(game_rule.combo[combo_name]) == 0 :

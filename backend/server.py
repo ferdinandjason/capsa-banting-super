@@ -4,6 +4,7 @@ import pickle
 import select
 import random
 import copy
+import queue
 
 class Server:
     def __init__(self):
@@ -46,7 +47,9 @@ class Server:
 
     def run(self):
         input_list = [self.server, sys.stdin]
+        game_order = queue.Queue()
         RUNNING = True
+        FIRST = True
         while RUNNING :
             input_ready, output_ready, except_ready = select.select(input_list, [], [])
 
@@ -58,6 +61,10 @@ class Server:
                     player_index = self.clients.index(client_socket)
                     self.reply_with_id(client_socket, player_index)
                     client_socket.send(str.encode(str(player_index)))
+                    game_order.put(player_index)
+
+                    if len(self.clients) == 2:
+                        game_order.put(game_order.get())
                 elif files == sys.stdin :
                     to_send = sys.stdin.readline()
                     to_send = to_send.strip()
@@ -72,19 +79,36 @@ class Server:
                         input_list.remove(files)
                     elif message['status'] == 'UPDATE' :
                         player_id = message['data']['id']
-                        player_card = self.game_data['player'][player_id]['card_index']
-                        player_choosen_card = message['data']['selected_card']
-                        player_choosen_card_point = message['data']['selected_card_point']
-                        for card in player_choosen_card:
-                            player_card.remove(card)
-                        self.game_data['player'][player_id]['card_index'] = player_card
-                        self.game_data['player'][player_id]['card_count'] = len(player_card)
-                        self.game_data['card_index_before'] = self.game_data['card_index_now']
-                        self.game_data['card_point_before'] = self.game_data['card_point_now']
-                        self.game_data['card_index_now'] = player_choosen_card
-                        self.game_data['card_point_now'] = player_choosen_card_point
-                        self.game_data['turn_player_id'] += 1
-                        self.game_data['turn_player_id'] %= 2
+                        is_play = message['data']['play'] == 'PLAY'
+                        print(message['data']['play'], is_play)
+                        if is_play :
+                            player_card = self.game_data['player'][player_id]['card_index']
+                            player_choosen_card = message['data']['selected_card']
+                            player_choosen_card_point = message['data']['selected_card_point']
+                            for card in player_choosen_card:
+                                player_card.remove(card)
+                            self.game_data['player'][player_id]['card_index'] = player_card
+                            self.game_data['player'][player_id]['card_count'] = len(player_card)
+                            self.game_data['card_index_before'] = self.game_data['card_index_now']
+                            self.game_data['card_point_before'] = self.game_data['card_point_now']
+                            self.game_data['card_index_now'] = player_choosen_card
+                            self.game_data['card_point_now'] = player_choosen_card_point
+                            
+                            self.game_data['turn_player_id'] = game_order.get()
+                            
+                            game_order.put(self.game_data['turn_player_id'])
+                        else :
+                            active_player_id = game_order.get()
+                            active_player = game_order.qsize()
+                            if active_player == 1 :
+                                self.game_data['card_point_now'] = 0
+                                for i in range(active_player_id + 1, len(self.clients)):
+                                    game_order.put(i)
+                                for i in range(0, active_player_id):
+                                    game_order.put(i)
+                            print(list(game_order.queue))
+                            
+
                         self.broadcast_game_data(self.game_data)
 
         self.server.close()
