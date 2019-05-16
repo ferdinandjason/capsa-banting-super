@@ -8,7 +8,7 @@ import queue
 
 class Server:
     def __init__(self):
-        self.SERVER_ADDRESS = ('localhost', 5000)
+        self.SERVER_ADDRESS = ('10.151.253.145', 5000)
         self.BUFFER_SIZE = 4096
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,14 +73,12 @@ class Server:
                     message = files.recv(self.BUFFER_SIZE)
                     message = pickle.loads(message)
                     print(message)
-                    print(message['status'] == 'QUIT')
                     if message['status'] == 'QUIT':
                         self.reply_ok(files)
                         input_list.remove(files)
                     elif message['status'] == 'UPDATE' :
                         player_id = message['data']['id']
                         is_play = message['data']['play'] == 'PLAY'
-                        print(message['data']['play'], is_play)
                         if is_play :
                             player_card = self.game_data['player'][player_id]['card_index']
                             player_choosen_card = message['data']['selected_card']
@@ -97,15 +95,23 @@ class Server:
                             self.game_data['turn_player_id'] = game_order.get()
                             
                             game_order.put(self.game_data['turn_player_id'])
+                            print('HEHEHEHE')
                         else :
-                            active_player_id = game_order.get()
+                            x = game_order.get()
                             active_player = game_order.qsize()
                             if active_player == 1 :
+                                last_man = game_order.get()
+                                print(last_man)
+                                game_order = queue.Queue()
                                 self.game_data['card_point_now'] = 0
-                                for i in range(active_player_id + 1, len(self.clients)):
+                                for i in range(last_man + 1, len(self.clients)):
                                     game_order.put(i)
-                                for i in range(0, active_player_id):
+                                for i in range(0, last_man + 1):
                                     game_order.put(i)
+
+                                self.game_data['turn_player_id'] = game_order.get()
+                                game_order.put(self.game_data['turn_player_id'])
+
                             print(list(game_order.queue))
                             
 

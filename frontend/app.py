@@ -77,7 +77,7 @@ class GameRule:
         elif temp >= 3 and temp <= 8:
             self.card_combo = 5
 
-        if before_point == -1 :
+        if before_point == 0 :
             self.card_combo = -1
 
         self.generate_combo()
@@ -114,13 +114,13 @@ class GameRule:
                 if point > self.point_before :
                     index_pair.append([value[0], value[1]])
                     point_pair.append(point)
-            elif len(value) == 3 and (self.card_combo == 3 or self.card_combo == -1):
+            if len(value) == 3 and (self.card_combo == 3 or self.card_combo == -1):
                 largest_type = max(self.card_type_sequence.index(self.cards[value[0]].type), self.card_type_sequence.index(self.cards[value[1]].type), self.card_type_sequence.index(self.cards[value[2]].type))
                 point = self.calculate_point(largest_type, self.cards[value[0]].number, 'trice')
                 if point > self.point_before :
                     index_trice.append([value[0], value[1], value[2]])
                     point_trice.append(point)
-            elif len(value) == 3 and (self.card_combo == 2 or self.card_combo == -1):
+            if len(value) == 3 and (self.card_combo == 2 or self.card_combo == -1):
                 trice = [value[0], value[1], value[2]]
                 for i in [[0,1], [0,2], [1,2]]:
                     largest_type = max(self.card_type_sequence.index(self.cards[trice[i[0]]].type), self.card_type_sequence.index(self.cards[trice[i[1]]].type))
@@ -129,7 +129,7 @@ class GameRule:
                         point_pair.append(point)
                         index_pair.append([trice[i[0]], trice[i[1]]])
 
-            elif len(value) == 4  and (self.card_combo == 5 or self.card_combo == -1):
+            if len(value) == 4  and (self.card_combo == 5 or self.card_combo == -1):
                 for index in range(3,16):
                     if index != key and len(self.card_counter[index]) != 4:
                         for index_card in self.card_counter[index]:
@@ -138,10 +138,10 @@ class GameRule:
                                 index_four.append([value[0], value[1], value[2], value[3], index_card])
                                 point_four.append(point)
 
-            elif len(value) == 4 and (self.card_combo == 2 or self.card_combo == -1):
+            if len(value) == 4 and (self.card_combo == 2 or self.card_combo == -1):
                 four = [value[0], value[1], value[2], value[3]]
                 for i in [[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]]:
-                    largest_type = max(self.card_type_sequence.index(self.cards[four[i[0]]].type), self.card_type_sequence.index(self.cards[trice[i[1]]].type))
+                    largest_type = max(self.card_type_sequence.index(self.cards[four[i[0]]].type), self.card_type_sequence.index(self.cards[four[i[1]]].type))
                     point = self.calculate_point(largest_type, self.cards[four[i[0]]].number, 'pair')
                     if point > self.point_before:
                         point_pair.append(point)
@@ -302,18 +302,44 @@ class Game:
         self.player_card_count[1] = 13
         self.player_card_count[2] = 13
         self.player_card_count[3] = 13
-        self.card_point_before = -1
+        self.card_point_before = 0
 
         point_now = 0
 
         while True:
-
             game_rule = GameRule(self.player_card, self.card_point_before)
             self.card_point_before = game_rule.point_before
 
+            combo_avaiable = False
             for combo_name in self.combo_list:
-                if len(game_rule.combo[combo_name]) == 0 :
-                    self.button_factory.button[combo_name].index = 2
+                if len(game_rule.combo[combo_name]) != 0 :
+                    combo_avaiable = True
+                    self.button_factory.button[combo_name].index = 0
+
+            
+            if combo_avaiable:
+                self.button_factory.button[combo_name].index = 2
+
+            exist_select = False
+            counter_card = 0
+            one_card_selected = ''
+            for card in self.player_card:
+                if card.select and self.MY_TURN:
+                    exist_select = True
+                    counter_card += 1
+                    one_card_selected = card
+                    self.button_factory.button['play'].index = 0
+            
+            # if no card selected, set the play button to disabled
+            if not exist_select:
+                self.button_factory.button['play'].index = 2
+
+            if counter_card == 1:
+                point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+                if point_now > self.card_point_before:
+                    self.button_factory.button['play'].index = 0
+                else :
+                    self.button_factory.button['play'].index = 2
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -326,7 +352,6 @@ class Game:
                     # click on player card
                     exist_select = False
                     counter_card = 0
-                    last_card = 0
                     for card in self.player_card:
                         card_rect = card.sprite.get_rect()
                         
@@ -348,13 +373,6 @@ class Game:
                     if not exist_select:
                         self.button_factory.button['play'].index = 2
 
-                    if counter_card == 1:
-                        point = game_rule.calculate_point(game_rule.card_type_sequence.index(last_card.type), last_card.number, 'single')
-                        if point > self.card_point_before:
-                            self.button_factory.button['play'].index = 0
-                        else :
-                            self.button_factory.button['play'].index = 2
-
                     # click on button
                     # if button click and not disabled, set the sprite to clicked
                     for button in self.button_factory.button.values():
@@ -374,6 +392,11 @@ class Game:
                                 counter_card += 1
                                 self.choosen_card.append(card)
                                 choosen_card_index.append(self.card_factory.card.index(card))
+
+                        if counter_card == 1:
+                            point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+                            if point_now > self.card_point_before:
+                                self.button_factory.button['play'].index = 0
 
                         for card in self.choosen_card:
                             self.player_card.remove(card)
@@ -429,7 +452,6 @@ class Game:
     def get_data_from_server(self):
         global THREAD_RUNNING
         while THREAD_RUNNING :
-            print(THREAD_RUNNING)
             message = self.server.server_socket.recv(self.server.BUFFER_SIZE)
             if message:
                 message = pickle.loads(message)
@@ -463,8 +485,11 @@ class Game:
                     if message['data']['turn_player_id'] == self.id:
                         self.MY_TURN = True
                         self.button_factory.button['play'].index = 0
+                        self.button_factory.button['pass'].index = 0
                     else :
                         self.MY_TURN = False
+                        self.button_factory.button['play'].index = 2
+                        self.button_factory.button['pass'].index = 2
 
                     self.card_point_before = message['data']['card_point_now']
                 elif message['status'] == 'BYE':

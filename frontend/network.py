@@ -3,7 +3,7 @@ import socket
 
 class Network:
     def __init__(self):
-        self.SERVER_ADDRESS = ('localhost', 5000)
+        self.SERVER_ADDRESS = ('10.151.253.145', 5000)
         self.BUFFER_SIZE = 4096
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect(self.SERVER_ADDRESS)
