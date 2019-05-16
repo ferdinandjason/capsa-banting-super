@@ -312,8 +312,8 @@ class Game:
 
             combo_avaiable = False
             for combo_name in self.combo_list:
-                if len(game_rule.combo[combo_name]) != 0 :
-                    combo_avaiable = True
+                if len(game_rule.combo[combo_name]) != 0:
+                    combo_avaiable = True                    
                     self.button_factory.button[combo_name].index = 0
 
             

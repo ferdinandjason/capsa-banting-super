@@ -63,7 +63,7 @@ class Server:
                     client_socket.send(str.encode(str(player_index)))
                     game_order.put(player_index)
 
-                    if len(self.clients) == 2:
+                    if len(self.clients) == 4:
                         game_order.put(game_order.get())
                 elif files == sys.stdin :
                     to_send = sys.stdin.readline()
