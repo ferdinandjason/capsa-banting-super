@@ -111,6 +111,8 @@ class Server:
 
                                 self.game_data['turn_player_id'] = game_order.get()
                                 game_order.put(self.game_data['turn_player_id'])
+                            else :
+                                self.game_data['turn_player_id'] = game_order.get()
 
                             print(list(game_order.queue))
                             
