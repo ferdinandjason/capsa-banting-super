@@ -63,7 +63,7 @@ class Server:
                     client_socket.send(str.encode(str(player_index)))
                     game_order.put(player_index)
 
-                    if len(self.clients) == 2:
+                    if len(self.clients) == 4:
                         game_order.put(game_order.get())
                 elif files == sys.stdin :
                     to_send = sys.stdin.readline()
@@ -97,16 +97,32 @@ class Server:
                             game_order.put(self.game_data['turn_player_id'])
                             print('HEHEHEHE')
                         else :
+                            game_stack = queue.LifoQueue()
+                            while(game_order.qsize() != 0):
+                                game_stack.put(game_order.get())
+
+                            game_stack.get()
+                            
+                            game_stack2 = queue.LifoQueue()
+                            while(game_stack.qsize() != 0):
+                                game_stack2.put(game_stack.get())
+
+                            game_order = queue.Queue()
+                            while(game_stack2.qsize() != 0):
+                                game_order.put(game_stack2.get())
+                            
                             x = game_order.get()
-                            active_player = game_order.qsize()
+                            game_order.put(x)
+
+                            active_player = len(list(game_order.queue))
                             if active_player == 1 :
                                 last_man = game_order.get()
-                                print(last_man)
                                 game_order = queue.Queue()
+                                game_order.put(last_man)
                                 self.game_data['card_point_now'] = 0
                                 for i in range(last_man + 1, len(self.clients)):
                                     game_order.put(i)
-                                for i in range(0, last_man + 1):
+                                for i in range(0, last_man):
                                     game_order.put(i)
 
                                 self.game_data['turn_player_id'] = game_order.get()
@@ -114,7 +130,7 @@ class Server:
                             else :
                                 self.game_data['turn_player_id'] = x
 
-                            print(list(game_order.queue))
+                        print(list(game_order.queue))
                             
 
                         self.broadcast_game_data(self.game_data)
