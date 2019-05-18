@@ -158,3 +158,14 @@ class BackCardFactory:
     def load(self):
         self.backcard = pygame.image.load(self.PATH).convert_alpha()
         return self
+
+
+class FontFactory:
+    def __init__(self):
+        self.PATH = os.path.join('.','assets','font', 'ConnectionII.otf')
+
+    def load(self):
+        return self
+    
+    def make_font(self, size):
+        return pygame.font.Font(self.PATH, size)

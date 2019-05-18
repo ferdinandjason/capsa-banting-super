@@ -5,10 +5,11 @@ import select
 import random
 import copy
 import queue
+import time
 
 class Server:
     def __init__(self):
-        self.SERVER_ADDRESS = ('10.151.253.145', 5000)
+        self.SERVER_ADDRESS = ('localhost', 5000)
         self.BUFFER_SIZE = 4096
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,11 +44,25 @@ class Server:
         self.game_data['player'][3]['card_index'] = self.card_index[39:52]
         self.game_data['player'][3]['card_count'] = 13
 
-        self.game_data['turn_player_id'] = 0
+        self.game_order = queue.Queue()
+
+        index_of_three_diamond = self.card_index.index(2)
+        if index_of_three_diamond < 13 : 
+            self.game_data['turn_player_id'] = 0
+            self.game_order.put(1),self.game_order.put(2),self.game_order.put(3),self.game_order.put(0)
+        elif index_of_three_diamond < 26 : 
+            self.game_data['turn_player_id'] = 1
+            self.game_order.put(2),self.game_order.put(3),self.game_order.put(0),self.game_order.put(1)
+        elif index_of_three_diamond < 39 : 
+            self.game_data['turn_player_id'] = 2
+            self.game_order.put(3),self.game_order.put(0),self.game_order.put(1),self.game_order.put(2)
+        elif index_of_three_diamond < 52 : 
+            self.game_data['turn_player_id'] = 3
+            self.game_order.put(0),self.game_order.put(1),self.game_order.put(2),self.game_order.put(3)
+        
 
     def run(self):
         input_list = [self.server, sys.stdin]
-        game_order = queue.Queue()
         RUNNING = True
         FIRST = True
         while RUNNING :
@@ -60,11 +75,12 @@ class Server:
                     self.clients.append(client_socket)
                     player_index = self.clients.index(client_socket)
                     self.reply_with_id(client_socket, player_index)
-                    client_socket.send(str.encode(str(player_index)))
-                    game_order.put(player_index)
-
-                    if len(self.clients) == 4:
-                        game_order.put(game_order.get())
+                    # client_socket.send(str.encode(str(player_index)))
+                    time.sleep(0.1)
+                    self.broadcast_joined({
+                        'count_player' : len(self.clients),
+                        'player' : player_index,
+                    })
                 elif files == sys.stdin :
                     to_send = sys.stdin.readline()
                     to_send = to_send.strip()
@@ -92,14 +108,14 @@ class Server:
                             self.game_data['card_index_now'] = player_choosen_card
                             self.game_data['card_point_now'] = player_choosen_card_point
                             
-                            self.game_data['turn_player_id'] = game_order.get()
+                            self.game_data['turn_player_id'] = self.game_order.get()
                             
-                            game_order.put(self.game_data['turn_player_id'])
+                            self.game_order.put(self.game_data['turn_player_id'])
                             print('HEHEHEHE')
                         else :
                             game_stack = queue.LifoQueue()
-                            while(game_order.qsize() != 0):
-                                game_stack.put(game_order.get())
+                            while(self.game_order.qsize() != 0):
+                                game_stack.put(self.game_order.get())
 
                             game_stack.get()
                             
@@ -107,35 +123,45 @@ class Server:
                             while(game_stack.qsize() != 0):
                                 game_stack2.put(game_stack.get())
 
-                            game_order = queue.Queue()
+                            self.game_order = queue.Queue()
                             while(game_stack2.qsize() != 0):
-                                game_order.put(game_stack2.get())
+                                self.game_order.put(game_stack2.get())
                             
-                            x = game_order.get()
-                            game_order.put(x)
+                            x = self.game_order.get()
+                            self.game_order.put(x)
 
-                            active_player = len(list(game_order.queue))
+                            active_player = len(list(self.game_order.queue))
                             if active_player == 1 :
-                                last_man = game_order.get()
-                                game_order = queue.Queue()
-                                game_order.put(last_man)
+                                last_man = self.game_order.get()
+                                self.game_order = queue.Queue()
+                                self.game_order.put(last_man)
                                 self.game_data['card_point_now'] = 0
                                 for i in range(last_man + 1, len(self.clients)):
-                                    game_order.put(i)
+                                    self.game_order.put(i)
                                 for i in range(0, last_man):
-                                    game_order.put(i)
+                                    self.game_order.put(i)
 
-                                self.game_data['turn_player_id'] = game_order.get()
-                                game_order.put(self.game_data['turn_player_id'])
+                                self.game_data['turn_player_id'] = self.game_order.get()
+                                self.game_order.put(self.game_data['turn_player_id'])
                             else :
                                 self.game_data['turn_player_id'] = x
 
-                        print(list(game_order.queue))
+                        print(list(self.game_order.queue))
                             
 
                         self.broadcast_game_data(self.game_data)
 
         self.server.close()
+
+    def broadcast_joined(self, data):
+        data_to_send = {}
+        data_to_send['status'] = 'WELCOME'
+        data_to_send['data'] = {}
+        data_to_send['data'] = data
+        for client_socket in self.clients :
+            data_pickled = pickle.dumps(data_to_send)
+            client_socket.send(data_pickled)
+            
 
     def reply_ok(self, client_socket):
         data_to_send = {}
@@ -151,6 +177,7 @@ class Server:
         data_to_send['data']['id'] = player_id
         data_to_send['data']['card_index'] = self.game_data['player'][player_id]['card_index']
         data_to_send['data']['turn_player_id'] = self.game_data['turn_player_id']
+        data_to_send['data']['count_player'] = len(self.clients)
         data_pickled = pickle.dumps(data_to_send)
         client_socket.send(data_pickled)
 

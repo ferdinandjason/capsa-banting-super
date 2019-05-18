@@ -254,6 +254,8 @@ class Game:
         self.background_factory = BackgroundFactory().load()
         self.button_factory = ButtonFactory().load()
         self.back_card_factory = BackCardFactory().load()
+        self.font_factory = FontFactory().load()
+
         self.CARD_IN_DECK = 13
         self.CARD_SELECTED = 0
         self.CARD_SELECTED_BEFORE = 0
@@ -266,6 +268,14 @@ class Game:
 
         # set button image to disabled
         self.button_factory.button['play'].index = 2
+
+        # self.WELCOME_SCREEN = True
+        # self.GAME_START = False
+
+        self.WELCOME_SCREEN = False
+        self.GAME_START = True
+
+        self.count_player = 1
 
     def start(self):
         global THREAD_RUNNING
@@ -302,152 +312,181 @@ class Game:
         self.player_card_count[1] = 13
         self.player_card_count[2] = 13
         self.player_card_count[3] = 13
+        self.player_card_order = 0
         self.card_point_before = 0
 
         point_now = 0
 
         while True:
-            game_rule = GameRule(self.player_card, self.card_point_before)
-            self.card_point_before = game_rule.point_before
+            if self.WELCOME_SCREEN :
+                welcome_title_text = "WELCOME TO CAPSA BANTING SUPER"
+                welcome_title_font = self.font_factory.make_font(50)
+                welcome_title_surface = welcome_title_font.render(welcome_title_text, 0, (255,255,255))
 
-            combo_avaiable = False
-            for combo_name in self.combo_list:
-                if len(game_rule.combo[combo_name]) != 0:
-                    combo_avaiable = True                    
-                    self.button_factory.button[combo_name].index = 0
+                player_text = "Player - {}".format(str(self.id+1))
+                player_font = self.font_factory.make_font(50)
+                player_surface = player_font.render(player_text, 0, (255,255,255))
 
-            
-            if combo_avaiable:
-                self.button_factory.button[combo_name].index = 2
+                waiting_text = "waiting player i({}/4)...".format(self.count_player)
+                waiting_font = self.font_factory.make_font(50)
+                waiting_surface = waiting_font.render(waiting_text, 0, (255,255,255))
+                
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        THREAD_RUNNING = False
+                        self.server.send(self.STATUS_QUIT, {})
+                        self.thread_server.join()
+                        sys.exit()
 
-            exist_select = False
-            counter_card = 0
-            one_card_selected = ''
-            for card in self.player_card:
-                if card.select and self.MY_TURN:
-                    exist_select = True
-                    counter_card += 1
-                    one_card_selected = card
-                    self.button_factory.button['play'].index = 0
-            
-            # if no card selected, set the play button to disabled
-            if not exist_select:
-                self.button_factory.button['play'].index = 2
+                self.screen.fill((0,0,0))
+                self.screen.blit(welcome_title_surface, (640 - welcome_title_surface.get_width()//2 , 150 - welcome_title_surface.get_height()//2))
+                self.screen.blit(player_surface,        (640 - player_surface.get_width()//2        , 250 - player_surface.get_height()//2))
+                self.screen.blit(waiting_surface,       (640 - waiting_surface.get_width()//2       , 400 - waiting_surface.get_height()//2))
 
-            if counter_card == 1:
-                point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
-                if point_now > self.card_point_before:
-                    self.button_factory.button['play'].index = 0
-                else :
+                pygame.display.update()
+
+            if self.GAME_START :
+                game_rule = GameRule(self.player_card, self.card_point_before)
+                self.card_point_before = game_rule.point_before
+
+                combo_avaiable = False
+                for combo_name in self.combo_list:
+                    if len(game_rule.combo[combo_name]) != 0:
+                        combo_avaiable = True                    
+                        self.button_factory.button[combo_name].index = 0
+
+                
+                if combo_avaiable:
+                    self.button_factory.button[combo_name].index = 2
+
+                exist_select = False
+                counter_card = 0
+                one_card_selected = ''
+                for card in self.player_card:
+                    if card.select and self.MY_TURN:
+                        exist_select = True
+                        counter_card += 1
+                        one_card_selected = card
+                        self.button_factory.button['play'].index = 0
+                
+                # if no card selected, set the play button to disabled
+                if not exist_select:
                     self.button_factory.button['play'].index = 2
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    THREAD_RUNNING = False
-                    self.server.send(self.STATUS_QUIT, {})
-                    self.thread_server.join()
-                    sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    mouse_x, mouse_y = event.pos
-                    # click on player card
-                    exist_select = False
-                    counter_card = 0
-                    for card in self.player_card:
-                        card_rect = card.sprite.get_rect()
-                        
-                        # if card is not selected the width of bounding box become half of normal
-                        if not card.select and card != self.player_card[-1]:
-                            card_rect.w = card_rect.w//2
-                        # if sprite card is clicked in the bounding box then card is set to selected or not selected
-                        if card_rect.collidepoint(mouse_x - card.pos['x'], mouse_y - card.pos['y']):
-                            print(card.type, card.number)
-                            card.select = not card.select
-                        # if card is selected, set the play button to click-able
-                        if card.select and self.MY_TURN:
-                            exist_select = True
-                            counter_card += 1
-                            last_card = card
-                            self.button_factory.button['play'].index = 0
-                    
-                    # if no card selected, set the play button to disabled
-                    if not exist_select:
+
+                if counter_card == 1:
+                    point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+                    if point_now > self.card_point_before:
+                        self.button_factory.button['play'].index = 0
+                    else :
                         self.button_factory.button['play'].index = 2
-
-                    # click on button
-                    # if button click and not disabled, set the sprite to clicked
-                    for button in self.button_factory.button.values():
-                        if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 0:
-                            button.index = 1
-
-                if event.type == pygame.MOUSEBUTTONUP:
-                    mouse_x, mouse_y = event.pos
-                    # if play button clicked
-                    if self.button_factory.button['play'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['play'].pos['x'], mouse_y - self.button_factory.button['play'].pos['y']) and self.button_factory.button['play'].index != 2:
+                
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        THREAD_RUNNING = False
+                        self.server.send(self.STATUS_QUIT, {})
+                        self.thread_server.join()
+                        sys.exit()
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_x, mouse_y = event.pos
+                        # click on player card
+                        exist_select = False
                         counter_card = 0
-                        self.choosen_card_before = copy.copy(self.choosen_card)
-                        self.choosen_card = []
-                        choosen_card_index = []
                         for card in self.player_card:
-                            if card.select :
-                                counter_card += 1
-                                self.choosen_card.append(card)
-                                choosen_card_index.append(self.card_factory.card.index(card))
-
-                        if counter_card == 1:
-                            point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
-                            if point_now > self.card_point_before:
-                                self.button_factory.button['play'].index = 0
-
-                        for card in self.choosen_card:
-                            self.player_card.remove(card)
-
-                        data = {}
-                        data['id'] = self.id
-                        data['play'] = 'PLAY'
-                        data['selected_card'] = choosen_card_index
-                        data['selected_card_point'] = point_now
-                        self.server.send(self.STATUS_UPDATE, data)
-
-                        self.button_factory.button['play'].index = 2
-
-                    if self.button_factory.button['pass'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['pass'].pos['x'], mouse_y - self.button_factory.button['pass'].pos['y']) and self.button_factory.button['pass'].index != 2:
-                        data = {}
-                        data['id'] = self.id
-                        data['play'] = 'PASS'
-                        self.server.send(self.STATUS_UPDATE, data)
-
-                    for combo_name in self.combo_list:
-                        if len(game_rule.combo[combo_name]) == 0 :
-                           self.button_factory.button[combo_name].index = 2
-                        if self.button_factory.button[combo_name].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button[combo_name].pos['x'], mouse_y - self.button_factory.button[combo_name].pos['y']) and self.button_factory.button[combo_name].index != 2:
-                            combo = game_rule.combo[combo_name]
-                            print(game_rule.card_counter)
-                            print(combo)
-
-                            counter_button[combo_name] += 1
-                            counter_button[combo_name] %= (len(combo) + 1)
-                            index = counter_button[combo_name]-1
-
-                            for card in self.player_card:
-                                card.select = False
+                            card_rect = card.sprite.get_rect()
                             
-                            if counter_button[combo_name] > 0 and self.MY_TURN:
-                                for idx in combo[index]:
-                                    self.player_card[idx].select = True
-                                point_now = game_rule.combo_point[combo_name][index]
-                                print(point_now)
+                            # if card is not selected the width of bounding box become half of normal
+                            if not card.select and card != self.player_card[-1]:
+                                card_rect.w = card_rect.w//2
+                            # if sprite card is clicked in the bounding box then card is set to selected or not selected
+                            if card_rect.collidepoint(mouse_x - card.pos['x'], mouse_y - card.pos['y']):
+                                print(card.type, card.number)
+                                card.select = not card.select
+                            # if card is selected, set the play button to click-able
+                            if card.select and self.MY_TURN:
+                                exist_select = True
+                                counter_card += 1
+                                last_card = card
                                 self.button_factory.button['play'].index = 0
-                            else :
-                                self.button_factory.button['play'].index = 2
+                        
+                        # if no card selected, set the play button to disabled
+                        if not exist_select:
+                            self.button_factory.button['play'].index = 2
 
-                    # if button is clicked, on mouseup set the sprite to click-able
-                    for button in self.button_factory.button.values():
-                        if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 1:
-                            button.index=0
-            
-            self.set_asset_position()
-            self.draw()
-            pygame.display.update()
+                        # click on button
+                        # if button click and not disabled, set the sprite to clicked
+                        for button in self.button_factory.button.values():
+                            if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 0:
+                                button.index = 1
+
+                    if event.type == pygame.MOUSEBUTTONUP:
+                        mouse_x, mouse_y = event.pos
+                        # if play button clicked
+                        if self.button_factory.button['play'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['play'].pos['x'], mouse_y - self.button_factory.button['play'].pos['y']) and self.button_factory.button['play'].index != 2:
+                            counter_card = 0
+                            self.choosen_card_before = copy.copy(self.choosen_card)
+                            self.choosen_card = []
+                            choosen_card_index = []
+                            for card in self.player_card:
+                                if card.select :
+                                    counter_card += 1
+                                    self.choosen_card.append(card)
+                                    choosen_card_index.append(self.card_factory.card.index(card))
+
+                            if counter_card == 1:
+                                point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+                                if point_now > self.card_point_before:
+                                    self.button_factory.button['play'].index = 0
+
+                            for card in self.choosen_card:
+                                self.player_card.remove(card)
+
+                            data = {}
+                            data['id'] = self.id
+                            data['play'] = 'PLAY'
+                            data['selected_card'] = choosen_card_index
+                            data['selected_card_point'] = point_now
+                            self.server.send(self.STATUS_UPDATE, data)
+
+                            self.button_factory.button['play'].index = 2
+
+                        if self.button_factory.button['pass'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['pass'].pos['x'], mouse_y - self.button_factory.button['pass'].pos['y']) and self.button_factory.button['pass'].index != 2:
+                            data = {}
+                            data['id'] = self.id
+                            data['play'] = 'PASS'
+                            self.server.send(self.STATUS_UPDATE, data)
+
+                        for combo_name in self.combo_list:
+                            if len(game_rule.combo[combo_name]) == 0 :
+                                self.button_factory.button[combo_name].index = 2
+                            if self.button_factory.button[combo_name].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button[combo_name].pos['x'], mouse_y - self.button_factory.button[combo_name].pos['y']) and self.button_factory.button[combo_name].index != 2:
+                                combo = game_rule.combo[combo_name]
+                                print(game_rule.card_counter)
+                                print(combo)
+
+                                counter_button[combo_name] += 1
+                                counter_button[combo_name] %= (len(combo) + 1)
+                                index = counter_button[combo_name]-1
+
+                                for card in self.player_card:
+                                    card.select = False
+                                
+                                if counter_button[combo_name] > 0 and self.MY_TURN:
+                                    for idx in combo[index]:
+                                        self.player_card[idx].select = True
+                                    point_now = game_rule.combo_point[combo_name][index]
+                                    print(point_now)
+                                    self.button_factory.button['play'].index = 0
+                                else :
+                                    self.button_factory.button['play'].index = 2
+
+                        # if button is clicked, on mouseup set the sprite to click-able
+                        for button in self.button_factory.button.values():
+                            if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 1:
+                                button.index=0
+                
+                self.set_asset_position()
+                self.draw()
+                pygame.display.update()
 
     def get_data_from_server(self):
         global THREAD_RUNNING
@@ -456,16 +495,28 @@ class Game:
             if message:
                 message = pickle.loads(message)
                 print(message)
-                if message['status'] == 'GET_ID':
+                if message['status'] == 'WELCOME':
+                    self.count_player = message['data']['count_player']
+                    self.player = message['data']['player']
+
+                elif message['status'] == 'START':
+                    self.GAME_START = True
+                    self.WELCOME_SCREEN = False
+
+                elif message['status'] == 'GET_ID':
                     self.id = message['data']['id']
                     self.initial_card_index = message['data']['card_index']
+                    self.count_player = message['data']['count_player']
                     self.LOADED_CARD = True
 
                     if message['data']['turn_player_id'] == self.id:
                         self.MY_TURN = True
                         self.button_factory.button['play'].index = 0
+                        self.button_factory.button['pass'].index = 0
                     else :
                         self.MY_TURN = False
+                        self.button_factory.button['play'].index = 2
+                        self.button_factory.button['pass'].index = 2
 
                 elif message['status'] == 'BROADCAST':
                     player_id = message['data']['player_id']
@@ -481,6 +532,8 @@ class Game:
                     for i in range(4):
                         idx = message['data']['player'][player_id]['player_sequence'][i]
                         self.player_card_count[i] = message['data']['player'][idx]['card_count']
+
+                    self.player_card_order = message['data']['player'][player_id]['player_sequence'].index(message['data']['turn_player_id'])
 
                     if message['data']['turn_player_id'] == self.id:
                         self.MY_TURN = True
@@ -539,12 +592,23 @@ class Game:
             # if card is selected, set position higher 
             if self.player_card[i].select :
                 self.player_card[i].pos['y'] -= 32
+
+        if self.MY_TURN :
+            self.turn_text = "Your Turn"
+        else :
+            self.turn_text = "Opponent Turn"
+
+        self.turn_font = self.font_factory.make_font(36)
+        self.turn_surface = self.turn_font.render(self.turn_text, 0, (255,255,255))
+
     
     def draw(self):
         # load assets to the screen -> (image,position)
         self.screen.blit(self.background_factory.background, (0,0))
         self.screen.blit(self.button_factory.button['play'].get_sprite(), self.button_factory.button['play'].position())
         self.screen.blit(self.button_factory.button['pass'].get_sprite(), self.button_factory.button['pass'].position())
+
+        self.screen.blit(self.turn_surface,       (1120 - self.turn_surface.get_width()//2       , 670 - self.turn_surface.get_height()//2))
 
         for combo_name in self.combo_list :
             self.screen.blit(self.button_factory.button[combo_name].get_sprite(), self.button_factory.button[combo_name].position())
@@ -553,16 +617,25 @@ class Game:
         for i in range(self.player_card_count[1]):
             player_back_card = self.back_card_factory.backcard
             player_back_card = pygame.transform.rotate(player_back_card, 90)
-            self.screen.blit(player_back_card, (70, 120 + i * (player_back_card.get_height()//3)))
+            if self.player_card_order == 1:
+                self.screen.blit(player_back_card, (90, 120 + i * (player_back_card.get_height()//3)))
+            else :
+                self.screen.blit(player_back_card, (70, 120 + i * (player_back_card.get_height()//3)))
 
         for i in range(self.player_card_count[2]):
             player_back_card = self.back_card_factory.backcard
-            self.screen.blit(player_back_card, (400 + i * (player_back_card.get_width()//3) , 7))
+            if self.player_card_order == 2:
+                self.screen.blit(player_back_card, (400 + i * (player_back_card.get_width()//3) , 27))
+            else :
+                self.screen.blit(player_back_card, (400 + i * (player_back_card.get_width()//3) , 7))
 
         for i in range(self.player_card_count[3]):
             player_back_card = self.back_card_factory.backcard
             player_back_card = pygame.transform.rotate(player_back_card, 90)
-            self.screen.blit(player_back_card, (1080, 120 + i * (player_back_card.get_height()//3)))
+            if self.player_card_order == 3:
+                self.screen.blit(player_back_card, (1060, 100 + i * (player_back_card.get_height()//3)))
+            else:
+                self.screen.blit(player_back_card, (1080, 100 + i * (player_back_card.get_height()//3)))
 
         # load card assets to the screen
         for i in range(len(self.player_card)):
