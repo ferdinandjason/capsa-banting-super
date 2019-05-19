@@ -269,11 +269,11 @@ class Game:
         # set button image to disabled
         self.button_factory.button['play'].index = 2
 
-        # self.WELCOME_SCREEN = True
-        # self.GAME_START = False
+        self.WELCOME_SCREEN = True
+        self.GAME_START = False
 
-        self.WELCOME_SCREEN = False
-        self.GAME_START = True
+        # self.WELCOME_SCREEN = False
+        # self.GAME_START = True
 
         self.count_player = 1
 
@@ -498,6 +498,9 @@ class Game:
                 if message['status'] == 'WELCOME':
                     self.count_player = message['data']['count_player']
                     self.player = message['data']['player']
+                    if self.count_player == 4:
+                        self.GAME_START = True
+                        self.WELCOME_SCREEN = False
 
                 elif message['status'] == 'START':
                     self.GAME_START = True
@@ -517,6 +520,10 @@ class Game:
                         self.MY_TURN = False
                         self.button_factory.button['play'].index = 2
                         self.button_factory.button['pass'].index = 2
+
+                    if self.count_player == 4:
+                        self.GAME_START = True
+                        self.WELCOME_SCREEN = False
 
                 elif message['status'] == 'BROADCAST':
                     player_id = message['data']['player_id']
