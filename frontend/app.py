@@ -7,227 +7,8 @@ import threading
 
 from factory import *
 from network import *
+from rule import Rule
 
-class Rule:
-    def __init__(self, cards, before_point):
-        self.cards = cards
-        self.card_counter = {
-            3 : [],
-            4 : [],
-            5 : [],
-            6 : [],
-            7 : [],
-            8 : [],
-            9 : [],
-            10 : [],
-            11 : [],
-            12 : [],
-            13 : [],
-            14 : [],
-            15 : [],
-        }
-        self.card_type_counter = {
-            'clover' : [],
-            'diamond' : [],
-            'heart' : [],
-            'spade' : [],
-        }
-        self.card_type_sequence = ['diamond', 'clover', 'heart', 'spade']
-        self.counting_card()
-
-        self.combo = {
-            "pair" : [],
-            "trice" : [],
-            "straight" : [],
-            "flush" : [],
-            "four-of-a-kind" : [],
-            "full-house" : [],
-        }
-
-        self.combo_point = {
-            "pair" : [],
-            "trice" : [],
-            "straight" : [],
-            "flush" : [],
-            "four-of-a-kind" : [],
-            "full-house" : [],
-        }
-
-        self.combo_value = {
-            'single' : 0,
-            'pair' : 1,
-            'trice' : 2,
-            'straight' : 3,
-            'flush' : 4,
-            'full-house' : 5,
-            'four-of-a-kind' : 6,
-            'straight-flush' : 7,
-            'royal-flush' : 8,
-        }
-
-        self.point_before = before_point
-        self.card_combo = -1
-        temp = before_point // 1000
-        if temp == 0:
-            self.card_combo = 1
-        elif temp == 1:
-            self.card_combo = 2
-        elif temp == 2:
-            self.card_combo = 3
-        elif temp >= 3 and temp <= 8:
-            self.card_combo = 5
-
-        if before_point == 0 :
-            self.card_combo = -1
-
-        self.generate_combo()
-
-    def counting_card(self):
-        index = 0
-        for card in self.cards:
-            self.card_counter[card.number].append(index)
-            self.card_type_counter[card.type].append(index)
-            index += 1
-
-    def calculate_point(self, types, number, combo):
-        POINT = self.combo_value[combo] * 1000 + number * 10 + types
-        return POINT
-
-    def generate_combo(self):
-        index_pair = []
-        index_trice = []
-        index_straight = []
-        index_flush = []
-        index_four = []
-        index_full_house = []
-
-        point_pair = []
-        point_trice = []
-        point_straight = []
-        point_flush = []
-        point_four = []
-        point_full_house = []
-        for key, value in self.card_counter.items():
-            if len(value) == 2 and (self.card_combo == 2 or self.card_combo == -1):
-                largest_type = max(self.card_type_sequence.index(self.cards[value[0]].type), self.card_type_sequence.index(self.cards[value[1]].type))
-                point = self.calculate_point(largest_type, self.cards[value[0]].number, 'pair')
-                if point > self.point_before :
-                    index_pair.append([value[0], value[1]])
-                    point_pair.append(point)
-            if len(value) == 3 and (self.card_combo == 3 or self.card_combo == -1):
-                largest_type = max(self.card_type_sequence.index(self.cards[value[0]].type), self.card_type_sequence.index(self.cards[value[1]].type), self.card_type_sequence.index(self.cards[value[2]].type))
-                point = self.calculate_point(largest_type, self.cards[value[0]].number, 'trice')
-                if point > self.point_before :
-                    index_trice.append([value[0], value[1], value[2]])
-                    point_trice.append(point)
-            if len(value) == 3 and (self.card_combo == 2 or self.card_combo == -1):
-                trice = [value[0], value[1], value[2]]
-                for i in [[0,1], [0,2], [1,2]]:
-                    largest_type = max(self.card_type_sequence.index(self.cards[trice[i[0]]].type), self.card_type_sequence.index(self.cards[trice[i[1]]].type))
-                    point = self.calculate_point(largest_type, self.cards[trice[i[0]]].number, 'pair')
-                    if point > self.point_before:
-                        point_pair.append(point)
-                        index_pair.append([trice[i[0]], trice[i[1]]])
-
-            if len(value) == 4  and (self.card_combo == 5 or self.card_combo == -1):
-                for index in range(3,16):
-                    if index != key and len(self.card_counter[index]) != 4:
-                        for index_card in self.card_counter[index]:
-                            point = self.calculate_point(3, self.cards[value[0]].number, 'four-of-a-kind')
-                            if point > self.point_before :
-                                index_four.append([value[0], value[1], value[2], value[3], index_card])
-                                point_four.append(point)
-
-            if len(value) == 4 and (self.card_combo == 2 or self.card_combo == -1):
-                four = [value[0], value[1], value[2], value[3]]
-                for i in [[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]]:
-                    largest_type = max(self.card_type_sequence.index(self.cards[four[i[0]]].type), self.card_type_sequence.index(self.cards[four[i[1]]].type))
-                    point = self.calculate_point(largest_type, self.cards[four[i[0]]].number, 'pair')
-                    if point > self.point_before:
-                        point_pair.append(point)
-                        index_pair.append([four[i[0]], four[i[1]]])
-
-
-            if key <= 11 and (self.card_combo == 5 or self.card_combo == -1):
-                straight_exist = True
-                for straight_key in range(key, key+5):
-                    if len(self.card_counter[straight_key]) == 0 :
-                        straight_exist = False
-                
-                if straight_exist :
-                    for straight1 in self.card_counter[key]:
-                        for straight2 in self.card_counter[key+1]:
-                            for straight3 in self.card_counter[key+2]:
-                                for straight4 in self.card_counter[key+3]:
-                                    for straight5 in self.card_counter[key+4]:
-                                        if self.cards[straight5].type == self.cards[straight4].type and \
-                                            self.cards[straight4].type == self.cards[straight3].type and \
-                                            self.cards[straight3].type == self.cards[straight2].type and \
-                                            self.cards[straight2].type == self.cards[straight1].type :
-                                            if self.cards[straight1].number == 11 :
-                                                point = self.calculate_point(self.card_type_sequence.index(self.cards[straight5].type), self.cards[straight5].number, 'royal-flush')
-                                                if point > self.point_before:
-                                                    point_straight.append(point)
-                                                    index_straight.append([straight1, straight2, straight3, straight4, straight5])
-                                            else :    
-                                                point = self.calculate_point(self.card_type_sequence.index(self.cards[straight5].type), self.cards[straight5].number, 'straight-flush')
-                                                if point > self.point_before:
-                                                    point_straight.append(point)
-                                                    index_straight.append([straight1, straight2, straight3, straight4, straight5])
-                                        else :
-                                            point = self.calculate_point(self.card_type_sequence.index(self.cards[straight5].type), self.cards[straight5].number, 'straight')
-                                            if point > self.point_before:
-                                                point_straight.append(point)
-                                                index_straight.append([straight1, straight2, straight3, straight4, straight5])
-        
-        for key, value in self.card_type_counter.items():
-            if len(value) >= 5 and (self.card_combo == 5 or self.card_combo == -1):
-                for permutation in itertools.combinations(value, 5):
-                    # permutation = permutation.sort()
-                    
-                    if self.cards[permutation[0]].number == self.cards[permutation[1]].number-1 and \
-                        self.cards[permutation[1]].number == self.cards[permutation[2]].number-1 and \
-                        self.cards[permutation[2]].number == self.cards[permutation[3]].number-1 and \
-                        self.cards[permutation[3]].number == self.cards[permutation[4]].number-1 :
-                        if self.cards[permutation[0]].number == 11 :
-                            point = self.calculate_point(self.card_type_sequence.index(self.cards[permutation[-1]].type), self.cards[permutation[-1]].number, 'royal-flush')
-                            if point > self.point_before:
-                                point_flush.append(point)
-                                index_flush.append(permutation)
-                        else :
-                            point = self.calculate_point(self.card_type_sequence.index(self.cards[permutation[-1]].type), self.cards[permutation[-1]].number, 'straight-flush')
-                            if point > self.point_before:
-                                point_flush.append(point)
-                                index_flush.append(permutation)
-                    else :
-                        point = self.calculate_point(self.card_type_sequence.index(self.cards[permutation[-1]].type), self.cards[permutation[-1]].number, 'flush')
-                        if point > self.point_before:
-                            point_flush.append(point)
-                            index_flush.append(permutation)
-
-        for pair in index_pair:
-            for trice in index_trice:
-                if (self.card_combo == 5 or self.card_combo == -1):
-                    largest_type = max(self.card_type_sequence.index(self.cards[trice[0]].type), self.card_type_sequence.index(self.cards[trice[1]].type), self.card_type_sequence.index(self.cards[trice[2]].type))
-                    point = self.calculate_point(largest_type, self.cards[trice[0]].number, 'full-house')
-                    if point > self.point_before:
-                        index_full_house.append([pair[0], pair[1], trice[0], trice[1], trice[2]])
-                        point_full_house.append(point)
-
-        self.combo['pair'] = index_pair
-        self.combo['trice'] = index_trice
-        self.combo['straight'] = index_straight
-        self.combo['flush'] = index_flush
-        self.combo['four-of-a-kind'] = index_four
-        self.combo['full-house'] = index_full_house
-
-        self.combo_point['pair'] = point_pair
-        self.combo_point['trice'] = point_trice
-        self.combo_point['straight'] = point_straight
-        self.combo_point['flush'] = point_flush
-        self.combo_point['four-of-a-kind'] = point_four
-        self.combo_point['full-house'] = point_full_house
-            
 THREAD_RUNNING = True
 
 class Game:
@@ -256,49 +37,24 @@ class Game:
         self.back_card_factory = BackCardFactory().load()
         self.font_factory = FontFactory().load()
 
+        # var counter
+        self.point_now = 0
         self.CARD_IN_DECK = 13
         self.CARD_SELECTED = 0
         self.CARD_SELECTED_BEFORE = 0
-
-        self.combo_list = ['pair', 'trice', 'straight', 'flush' , 'full-house', 'four-of-a-kind']
-        self.MY_TURN = False
-        
-        # TODO: shuffle on server
-        # random.shuffle(self.card_factory.card)
-
-        # set button image to disabled
-        self.button_factory.button['play'].index = 2
-
-        self.WELCOME_SCREEN = True
-        self.GAME_START = False
-        self.WINNER_SCREEN = False
-
-        # self.WELCOME_SCREEN = False
-        # self.GAME_START = True
-
         self.count_player = 1
 
-    def start(self):
-        global THREAD_RUNNING
-        # TODO: get player card index from server
-        # shallow copy
+        self.player_card = []
 
-        self.thread_server = threading.Thread(target=self.get_data_from_server)
-        self.thread_server.start()
+        self.player_card_count = [0] * 4
+        self.player_card_count[0] = 13
+        self.player_card_count[1] = 13
+        self.player_card_count[2] = 13
+        self.player_card_count[3] = 13
+        self.player_card_order = 0
+        self.card_point_before = 0
 
-        while self.LOADED_CARD == False:
-            pass
-
-        if self.LOADED_CARD == True:
-            self.player_card = []
-            for index in self.initial_card_index:
-                self.player_card.append(self.card_factory.card[index])
-
-        # self.player_card = copy.copy(self.card_factory.card[:13])
-        self.player_card.sort()
-        self.choosen_card = []
-        self.choosen_card_before = []
-        counter_button = {
+        self.counter_button = {
             'pair' : 0,
             'trice' : 0,
             'straight' : 0,
@@ -306,191 +62,279 @@ class Game:
             'full-house': 0,
             'four-of-a-kind' : 0,
         }
-        game_rule = ''
 
-        self.player_card_count = [0] * 4
-        self.player_card_count[0] = len(self.player_card)
-        self.player_card_count[1] = 13
-        self.player_card_count[2] = 13
-        self.player_card_count[3] = 13
-        self.player_card_order = 0
-        self.card_point_before = 0
+        # combo list
+        self.combo_list = ['pair', 'trice', 'straight', 'flush' , 'full-house', 'four-of-a-kind']
 
-        point_now = 0
+        # boolean for turn
+        self.MY_TURN = False
+
+        # set button image to disabled
+        self.button_factory.button['play'].index = 2
+
+        # game state
+        self.GAME_STATE = 1
+
+        self.STATE_WELCOME = 1
+        self.STATE_GAME = 2
+        self.STATE_WINNER = 3
+
+        # initialize Rule class
+        self.game_rule = ''
+
+
+    def init_player_card(self):
+        # check if card is loaded or not
+        while self.LOADED_CARD == False:
+            pass
+
+        # if loaded , render it to player's card
+        if self.LOADED_CARD == True:
+            self.player_card = []
+            for index in self.initial_card_index:
+                self.player_card.append(self.card_factory.card[index])
+
+        self.player_card.sort()
+        self.choosen_card = []
+        self.choosen_card_before = []
+
+
+    def start(self):
+        # set global threading
+        global THREAD_RUNNING
+
+        self.thread_server = threading.Thread(target=self.get_data_from_server)
+        self.thread_server.start()
+
+        self.init_player_card()
 
         while True:
-            if self.WELCOME_SCREEN :
-                welcome_title_text = "WELCOME TO CAPSA BANTING SUPER"
-                welcome_title_font = self.font_factory.make_font(50)
-                welcome_title_surface = welcome_title_font.render(welcome_title_text, 0, (255,255,255))
+            if self.GAME_STATE == self.STATE_WELCOME :
+                self.handle_welcome()
+            if self.GAME_STATE == self.STATE_GAME :
+                self.handle_game()
+            if self.GAME_STATE == self.STATE_WINNER :
+                self.handle_winner()
 
-                player_text = "Player - {}".format(str(self.id+1))
-                player_font = self.font_factory.make_font(50)
-                player_surface = player_font.render(player_text, 0, (255,255,255))
+    def handle_game(self):
+        self.game_rule = Rule(self.player_card, self.card_point_before)
+        self.card_point_before = self.game_rule.point_before
 
-                waiting_text = "waiting player i({}/4)...".format(self.count_player)
-                waiting_font = self.font_factory.make_font(50)
-                waiting_surface = waiting_font.render(waiting_text, 0, (255,255,255))
-                
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        THREAD_RUNNING = False
-                        self.server.send(self.STATUS_QUIT, {})
-                        self.thread_server.join()
-                        sys.exit()
+        # check if combo is avaiable
+        combo_avaiable = False
+        for combo_name in self.combo_list:
+            if len(self.game_rule.combo[combo_name]) != 0:
+                combo_avaiable = True                    
+                self.button_factory.button[combo_name].index = 0
+            else : 
+                self.button_factory.button[combo_name].index = 2
 
-                self.screen.fill((0,0,0))
-                self.screen.blit(welcome_title_surface, (640 - welcome_title_surface.get_width()//2 , 150 - welcome_title_surface.get_height()//2))
-                self.screen.blit(player_surface,        (640 - player_surface.get_width()//2        , 250 - player_surface.get_height()//2))
-                self.screen.blit(waiting_surface,       (640 - waiting_surface.get_width()//2       , 400 - waiting_surface.get_height()//2))
+        if not combo_avaiable:
+            self.button_factory.button['play'].index = 2
 
-                pygame.display.update()
+        # check if is possible to make move
+        exist_select = False
+        counter_card = 0
+        one_card_selected = ''
+        for card in self.player_card:
+            if card.select and self.MY_TURN:
+                exist_select = True
+                counter_card += 1
+                one_card_selected = card
+                self.button_factory.button['play'].index = 0
+        
+        # if no card selected, set the play button to disabled
+        if not exist_select:
+            self.button_factory.button['play'].index = 2
 
-            if self.GAME_START :
-                game_rule = Rule(self.player_card, self.card_point_before)
-                self.card_point_before = game_rule.point_before
+        if counter_card == 1:
+            self.point_now = self.game_rule.calculate_point(self.game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+            if self.point_now > self.card_point_before:
+                self.button_factory.button['play'].index = 0
+            else :
+                self.button_factory.button['play'].index = 2
 
-                combo_avaiable = False
-                for combo_name in self.combo_list:
-                    if len(game_rule.combo[combo_name]) != 0:
-                        combo_avaiable = True                    
-                        self.button_factory.button[combo_name].index = 0
 
-                
-                if combo_avaiable:
-                    self.button_factory.button[combo_name].index = 2
-
+        # HANDLING PYGAME MAIN EVENT
+        for event in pygame.event.get():
+            # if current event is quit
+            if event.type == pygame.QUIT:
+                THREAD_RUNNING = False
+                self.server.send(self.STATUS_QUIT, {})
+                self.thread_server.join()
+                sys.exit()
+            
+            # if current event is click
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = event.pos
                 exist_select = False
                 counter_card = 0
-                one_card_selected = ''
                 for card in self.player_card:
+                    card_rect = card.sprite.get_rect()
+                    
+                    # if card is not selected the width of bounding box become half of normal
+                    # if sprite card is clicked in the bounding box then card is set to selected or not selected
+                    # if card is selected, set the play button to click-able
+                    if not card.select and card != self.player_card[-1]:
+                        card_rect.w = card_rect.w//2
+                    if card_rect.collidepoint(mouse_x - card.pos['x'], mouse_y - card.pos['y']):
+                        print(card.type, card.number)
+                        card.select = not card.select
                     if card.select and self.MY_TURN:
                         exist_select = True
                         counter_card += 1
-                        one_card_selected = card
+                        last_card = card
                         self.button_factory.button['play'].index = 0
                 
                 # if no card selected, set the play button to disabled
                 if not exist_select:
                     self.button_factory.button['play'].index = 2
 
-                if counter_card == 1:
-                    point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
-                    if point_now > self.card_point_before:
-                        self.button_factory.button['play'].index = 0
-                    else :
-                        self.button_factory.button['play'].index = 2
-                
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        THREAD_RUNNING = False
-                        self.server.send(self.STATUS_QUIT, {})
-                        self.thread_server.join()
-                        sys.exit()
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        mouse_x, mouse_y = event.pos
-                        # click on player card
-                        exist_select = False
-                        counter_card = 0
+                # click on button
+                # if button click and not disabled, set the sprite to clicked
+                for button in self.button_factory.button.values():
+                    if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 0:
+                        button.index = 1
+
+            # if current event is clicked
+            if event.type == pygame.MOUSEBUTTONUP:
+                mouse_x, mouse_y = event.pos
+
+                # PLAY CLICKED
+                if self.button_factory.button['play'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['play'].pos['x'], mouse_y - self.button_factory.button['play'].pos['y']) and self.button_factory.button['play'].index != 2:
+                    counter_card = 0
+                    self.choosen_card_before = copy.copy(self.choosen_card)
+                    self.choosen_card = []
+                    choosen_card_index = []
+                    for card in self.player_card:
+                        if card.select :
+                            counter_card += 1
+                            self.choosen_card.append(card)
+                            choosen_card_index.append(self.card_factory.card.index(card))
+
+                    if counter_card == 1:
+                        self.point_now = self.game_rule.calculate_point(self.game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
+                        if self.point_now > self.card_point_before:
+                            self.button_factory.button['play'].index = 0
+
+                    for card in self.choosen_card:
+                        self.player_card.remove(card)
+
+                    # send current play state to server
+                    data = {}
+                    data['id'] = self.id
+                    data['play'] = 'PLAY'
+                    data['selected_card'] = choosen_card_index
+                    data['selected_card_point'] = self.point_now
+                    self.server.send(self.STATUS_UPDATE, data)
+
+                    self.button_factory.button['play'].index = 2
+
+                # PASS CLICKED
+                if self.button_factory.button['pass'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['pass'].pos['x'], mouse_y - self.button_factory.button['pass'].pos['y']) and self.button_factory.button['pass'].index != 2:
+                    # send if player is passes
+                    data = {}
+                    data['id'] = self.id
+                    data['play'] = 'PASS'
+                    self.server.send(self.STATUS_UPDATE, data)
+
+                # COMBO BUTTON SET STATUS
+                for combo_name in self.combo_list:
+                    if len(self.game_rule.combo[combo_name]) == 0 :
+                        self.button_factory.button[combo_name].index = 2
+                    if self.button_factory.button[combo_name].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button[combo_name].pos['x'], mouse_y - self.button_factory.button[combo_name].pos['y']) and self.button_factory.button[combo_name].index != 2:
+                        combo = self.game_rule.combo[combo_name]
+
+                        self.counter_button[combo_name] += 1
+                        self.counter_button[combo_name] %= (len(combo) + 1)
+                        index = self.counter_button[combo_name]-1
+
                         for card in self.player_card:
-                            card_rect = card.sprite.get_rect()
-                            
-                            # if card is not selected the width of bounding box become half of normal
-                            if not card.select and card != self.player_card[-1]:
-                                card_rect.w = card_rect.w//2
-                            # if sprite card is clicked in the bounding box then card is set to selected or not selected
-                            if card_rect.collidepoint(mouse_x - card.pos['x'], mouse_y - card.pos['y']):
-                                print(card.type, card.number)
-                                card.select = not card.select
-                            # if card is selected, set the play button to click-able
-                            if card.select and self.MY_TURN:
-                                exist_select = True
-                                counter_card += 1
-                                last_card = card
-                                self.button_factory.button['play'].index = 0
+                            card.select = False
                         
-                        # if no card selected, set the play button to disabled
-                        if not exist_select:
+                        if self.counter_button[combo_name] > 0 and self.MY_TURN:
+                            for idx in combo[index]:
+                                self.player_card[idx].select = True
+                            self.point_now = self.game_rule.combo_point[combo_name][index]
+                            self.button_factory.button['play'].index = 0
+                        else :
                             self.button_factory.button['play'].index = 2
 
-                        # click on button
-                        # if button click and not disabled, set the sprite to clicked
-                        for button in self.button_factory.button.values():
-                            if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 0:
-                                button.index = 1
+                # OTHER BUTTON SET STATUS
+                for button in self.button_factory.button.values():
+                    if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 1:
+                        button.index=0
+        
+        self.set_asset_position()
+        self.draw()
+        pygame.display.update()
 
-                    if event.type == pygame.MOUSEBUTTONUP:
-                        mouse_x, mouse_y = event.pos
-                        # if play button clicked
-                        if self.button_factory.button['play'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['play'].pos['x'], mouse_y - self.button_factory.button['play'].pos['y']) and self.button_factory.button['play'].index != 2:
-                            counter_card = 0
-                            self.choosen_card_before = copy.copy(self.choosen_card)
-                            self.choosen_card = []
-                            choosen_card_index = []
-                            for card in self.player_card:
-                                if card.select :
-                                    counter_card += 1
-                                    self.choosen_card.append(card)
-                                    choosen_card_index.append(self.card_factory.card.index(card))
+    def handle_welcome(self):
+        welcome_title_text = "WELCOME TO CAPSA BANTING SUPER"
+        welcome_title_font = self.font_factory.make_font(50)
+        welcome_title_surface = welcome_title_font.render(welcome_title_text, 0, (255,255,255))
 
-                            if counter_card == 1:
-                                point_now = game_rule.calculate_point(game_rule.card_type_sequence.index(one_card_selected.type), one_card_selected.number, 'single')
-                                if point_now > self.card_point_before:
-                                    self.button_factory.button['play'].index = 0
+        player_text = "Player - {}".format(str(self.id+1))
+        player_font = self.font_factory.make_font(50)
+        player_surface = player_font.render(player_text, 0, (255,255,255))
 
-                            for card in self.choosen_card:
-                                self.player_card.remove(card)
+        waiting_text = "waiting player-({}/4)...".format(self.count_player)
+        waiting_font = self.font_factory.make_font(50)
+        waiting_surface = waiting_font.render(waiting_text, 0, (255,255,255))
 
-                            data = {}
-                            data['id'] = self.id
-                            data['play'] = 'PLAY'
-                            data['selected_card'] = choosen_card_index
-                            data['selected_card_point'] = point_now
-                            self.server.send(self.STATUS_UPDATE, data)
+        instruction_text = "Game will start as soon as the player count reach four".format(self.count_player)
+        instruction_font = self.font_factory.make_font(30)
+        instruction_surface = instruction_font.render(instruction_text, 0, (255,255,255))
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                THREAD_RUNNING = False
+                self.server.send(self.STATUS_QUIT, {})
+                self.thread_server.join()
 
-                            self.button_factory.button['play'].index = 2
+                sys.exit()
 
-                        if self.button_factory.button['pass'].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button['pass'].pos['x'], mouse_y - self.button_factory.button['pass'].pos['y']) and self.button_factory.button['pass'].index != 2:
-                            data = {}
-                            data['id'] = self.id
-                            data['play'] = 'PASS'
-                            self.server.send(self.STATUS_UPDATE, data)
+        self.screen.blit(self.background_factory.background['welcome'], (0,0))
+        self.screen.blit(welcome_title_surface, (640 - welcome_title_surface.get_width()//2 , 150 - welcome_title_surface.get_height()//2))
+        self.screen.blit(player_surface,        (640 - player_surface.get_width()//2        , 250 - player_surface.get_height()//2))
+        self.screen.blit(waiting_surface,       (640 - waiting_surface.get_width()//2       , 400 - waiting_surface.get_height()//2))
+        self.screen.blit(instruction_surface,   (640 - instruction_surface.get_width()//2   , 470 - instruction_surface.get_height()//2))
 
-                        for combo_name in self.combo_list:
-                            if len(game_rule.combo[combo_name]) == 0 :
-                                self.button_factory.button[combo_name].index = 2
-                            if self.button_factory.button[combo_name].sprite[0].get_rect().collidepoint(mouse_x - self.button_factory.button[combo_name].pos['x'], mouse_y - self.button_factory.button[combo_name].pos['y']) and self.button_factory.button[combo_name].index != 2:
-                                combo = game_rule.combo[combo_name]
-                                print(game_rule.card_counter)
-                                print(combo)
+        pygame.display.update()
 
-                                counter_button[combo_name] += 1
-                                counter_button[combo_name] %= (len(combo) + 1)
-                                index = counter_button[combo_name]-1
 
-                                for card in self.player_card:
-                                    card.select = False
-                                
-                                if counter_button[combo_name] > 0 and self.MY_TURN:
-                                    for idx in combo[index]:
-                                        self.player_card[idx].select = True
-                                    point_now = game_rule.combo_point[combo_name][index]
-                                    print(point_now)
-                                    self.button_factory.button['play'].index = 0
-                                else :
-                                    self.button_factory.button['play'].index = 2
+    def handle_winner(self):
+        winner_text = "Player-{} win the Game!".format(self.victory_id+1)
+        winner_font = self.font_factory.make_font(40)
+        winner_surface = winner_font.render(winner_text, 0, (0,0,0))
 
-                        # if button is clicked, on mouseup set the sprite to click-able
-                        for button in self.button_factory.button.values():
-                            if button.sprite[0].get_rect().collidepoint(mouse_x - button.pos['x'], mouse_y - button.pos['y']) and button.index == 1:
-                                button.index=0
-                
-                self.set_asset_position()
-                self.draw()
-                pygame.display.update()
+        thankyou_text1 = "Thank you for playing this game!"
+        thankyou_font1 = self.font_factory.make_font(30)
+        thankyou_surface1 = thankyou_font1.render(thankyou_text1, 0, (0,0,0))
 
-            if self.WINNER_SCREEN : 
-                pass
+        thankyou_text2 = "Don't forget to share to your friend"
+        thankyou_font2 = self.font_factory.make_font(30)
+        thankyou_surface2 = thankyou_font2.render(thankyou_text2, 0, (0,0,0))
+
+        thankyou_text3 = "Press x on right top window to quit"
+        thankyou_font3 = self.font_factory.make_font(30)
+        thankyou_surface3 = thankyou_font3.render(thankyou_text3, 0, (0,0,0))
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                THREAD_RUNNING = False
+                self.server.send(self.STATUS_QUIT, {})
+                self.thread_server.join()
+
+                sys.exit()
+
+        self.screen.blit(self.background_factory.background['winner'], (0,0))
+        self.screen.blit(winner_surface,    (655 - winner_surface.get_width()//2    , 270 - winner_surface.get_height()//2))
+        self.screen.blit(thankyou_surface1, (655 - thankyou_surface1.get_width()//2 , 360 - thankyou_surface1.get_height()//2))
+        self.screen.blit(thankyou_surface2, (655 - thankyou_surface2.get_width()//2 , 400 - thankyou_surface2.get_height()//2))
+        self.screen.blit(thankyou_surface3, (655 - thankyou_surface3.get_width()//2 , 440 - thankyou_surface3.get_height()//2))
+
+        pygame.display.update()
 
     def get_data_from_server(self):
         global THREAD_RUNNING
@@ -499,22 +343,25 @@ class Game:
             if message:
                 message = pickle.loads(message)
                 print(message)
+
+                # SERVER BROADCASTS WELCOME NEW PLAYER
                 if message['status'] == 'WELCOME':
                     self.count_player = message['data']['count_player']
                     self.player = message['data']['player']
                     if self.count_player == 4:
-                        self.GAME_START = True
-                        self.WELCOME_SCREEN = False
+                        self.GAME_STATE = self.STATE_GAME
 
+                # SERVER BROADCASTS THAT GAME IS BEGIN
                 elif message['status'] == 'START':
-                    self.GAME_START = True
-                    self.WELCOME_SCREEN = False
+                    self.GAME_STATE = self.STATE_GAME
 
+                # SERVER REPLY CURRENT PLAYER ID AND PLAYER CARD
                 elif message['status'] == 'GET_ID':
                     self.id = message['data']['id']
                     self.initial_card_index = message['data']['card_index']
                     self.count_player = message['data']['count_player']
                     self.LOADED_CARD = True
+
                     self.current_player_id = message['data']['turn_player_id']
 
                     if message['data']['turn_player_id'] == self.id:
@@ -527,9 +374,9 @@ class Game:
                         self.button_factory.button['pass'].index = 2
 
                     if self.count_player == 4:
-                        self.GAME_START = True
-                        self.WELCOME_SCREEN = False
+                        self.GAME_STATE = self.STATE_GAME
 
+                # SERVER BROADCASTS FULL GAME STATE 
                 elif message['status'] == 'BROADCAST':
                     player_id = message['data']['player_id']
                     self.choosen_card_index = message['data']['card_index_now']
@@ -547,6 +394,7 @@ class Game:
                         self.player_card_count[i] = message['data']['player'][idx]['card_count']
 
                     self.player_card_order = message['data']['player'][player_id]['player_sequence'].index(message['data']['turn_player_id'])
+                    self.current_player_id = message['data']['turn_player_id']
 
                     if message['data']['turn_player_id'] == self.id:
                         self.MY_TURN = True
@@ -559,16 +407,14 @@ class Game:
 
                     self.card_point_before = message['data']['card_point_now']
 
+                # SERVER DECIDED THE WINNER BASED ON GAME STATE AND DATA
                 elif message['status'] == 'WINNER' :
-                    self.GAME_START = False
-                    self.WELCOME_SCREEN = False
-                    self.WINNER_SCREEN = True
+                    self.GAME_STATE = self.STATE_WINNER
                     self.victory_id = message['data']['player_id']
 
+                # SERVER REPLY FOR QUIT EVENT
                 elif message['status'] == 'BYE':
                     break
-
-
 
     def set_asset_position(self):
         center_position_x = 640
@@ -624,7 +470,7 @@ class Game:
     
     def draw(self):
         # load assets to the screen -> (image,position)
-        self.screen.blit(self.background_factory.background, (0,0))
+        self.screen.blit(self.background_factory.background['game'], (0,0))
         self.screen.blit(self.button_factory.button['play'].get_sprite(), self.button_factory.button['play'].position())
         self.screen.blit(self.button_factory.button['pass'].get_sprite(), self.button_factory.button['pass'].position())
 
@@ -666,9 +512,6 @@ class Game:
 
         for i in range(len(self.choosen_card_before)):
             self.screen.blit(self.choosen_card_before[i].sprite, self.choosen_card_before[i].position())
-
-
-
         
 if __name__ == "__main__":
     app = Game()

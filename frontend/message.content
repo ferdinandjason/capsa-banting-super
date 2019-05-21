@@ -9,7 +9,7 @@
         }
     },
     {
-        "status" : "OK",
+        "status" : "BROADCAST",
         "data" : {
             "player_id" : 1,
             "card_index_before" : [],
@@ -41,4 +41,24 @@
             }
         }
     }
+,
+
+{
+    "status" : "GET_ID",
+    "data" : {
+        "id" : 1,
+        "card_index" : [],
+        "turn_player_id" : 3,
+        "count_player" : 3
+    }
+},
+
+{
+  "status" : "WELCOME",
+  "data" : {
+    "count_player" : 4,
+    "player" : 1
+  }
+}
+
 ]
