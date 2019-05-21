@@ -8,7 +8,7 @@ import threading
 from factory import *
 from network import *
 
-class GameRule:
+class Rule:
     def __init__(self, cards, before_point):
         self.cards = cards
         self.card_counter = {
@@ -271,6 +271,7 @@ class Game:
 
         self.WELCOME_SCREEN = True
         self.GAME_START = False
+        self.WINNER_SCREEN = False
 
         # self.WELCOME_SCREEN = False
         # self.GAME_START = True
@@ -346,7 +347,7 @@ class Game:
                 pygame.display.update()
 
             if self.GAME_START :
-                game_rule = GameRule(self.player_card, self.card_point_before)
+                game_rule = Rule(self.player_card, self.card_point_before)
                 self.card_point_before = game_rule.point_before
 
                 combo_avaiable = False
@@ -488,6 +489,9 @@ class Game:
                 self.draw()
                 pygame.display.update()
 
+            if self.WINNER_SCREEN : 
+                pass
+
     def get_data_from_server(self):
         global THREAD_RUNNING
         while THREAD_RUNNING :
@@ -511,6 +515,7 @@ class Game:
                     self.initial_card_index = message['data']['card_index']
                     self.count_player = message['data']['count_player']
                     self.LOADED_CARD = True
+                    self.current_player_id = message['data']['turn_player_id']
 
                     if message['data']['turn_player_id'] == self.id:
                         self.MY_TURN = True
@@ -530,8 +535,9 @@ class Game:
                     self.choosen_card_index = message['data']['card_index_now']
                     self.choosen_card_before_index = message['data']['card_index_before']
                     self.choosen_card = []
-                    for index in self.choosen_card_index:
-                        self.choosen_card.append(self.card_factory.card[index])
+                    if len(self.choosen_card_index) > 0 : 
+                        for index in self.choosen_card_index:
+                            self.choosen_card.append(self.card_factory.card[index])
                     self.choosen_card_before = []
                     for index in self.choosen_card_before_index:
                         self.choosen_card_before.append(self.card_factory.card[index])
@@ -552,6 +558,13 @@ class Game:
                         self.button_factory.button['pass'].index = 2
 
                     self.card_point_before = message['data']['card_point_now']
+
+                elif message['status'] == 'WINNER' :
+                    self.GAME_START = False
+                    self.WELCOME_SCREEN = False
+                    self.WINNER_SCREEN = True
+                    self.victory_id = message['data']['player_id']
+
                 elif message['status'] == 'BYE':
                     break
 
@@ -603,7 +616,7 @@ class Game:
         if self.MY_TURN :
             self.turn_text = "Your Turn"
         else :
-            self.turn_text = "Opponent Turn"
+            self.turn_text = "Player-{} Turn".format(self.current_player_id+1)
 
         self.turn_font = self.font_factory.make_font(36)
         self.turn_surface = self.turn_font.render(self.turn_text, 0, (255,255,255))

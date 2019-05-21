@@ -111,7 +111,12 @@ class Server:
                             self.game_data['turn_player_id'] = self.game_order.get()
                             
                             self.game_order.put(self.game_data['turn_player_id'])
-                            print('HEHEHEHE')
+
+                            if len(player_card) == 0 :
+                                winner_data = {}
+                                winner_data['player_id'] = player_id
+                                self.broadcast_winner(winner_data)
+
                         else :
                             game_stack = queue.LifoQueue()
                             while(self.game_order.qsize() != 0):
@@ -135,11 +140,15 @@ class Server:
                                 last_man = self.game_order.get()
                                 self.game_order = queue.Queue()
                                 self.game_order.put(last_man)
-                                self.game_data['card_point_now'] = 0
                                 for i in range(last_man + 1, len(self.clients)):
                                     self.game_order.put(i)
                                 for i in range(0, last_man):
                                     self.game_order.put(i)
+
+                                self.game_data['card_index_before'] = []
+                                self.game_data['card_point_before'] = []
+                                self.game_data['card_index_now'] = 0
+                                self.game_data['card_point_now'] = 0
 
                                 self.game_data['turn_player_id'] = self.game_order.get()
                                 self.game_order.put(self.game_data['turn_player_id'])
@@ -156,6 +165,15 @@ class Server:
     def broadcast_joined(self, data):
         data_to_send = {}
         data_to_send['status'] = 'WELCOME'
+        data_to_send['data'] = {}
+        data_to_send['data'] = data
+        for client_socket in self.clients :
+            data_pickled = pickle.dumps(data_to_send)
+            client_socket.send(data_pickled)
+
+    def broadcast_winner(self, data):
+        data_to_send = {}
+        data_to_send['status'] = 'WINNER'
         data_to_send['data'] = {}
         data_to_send['data'] = data
         for client_socket in self.clients :
