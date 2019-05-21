@@ -109,10 +109,16 @@ class BackgroundFactory :
 """
 class BackgroundFactory:
     def __init__(self):
-        self.PATH = os.path.join('.','assets','background.jpg')
+        self.PATH = {}
+        self.PATH['game'] = os.path.join('.','assets','background.jpg')
+        self.PATH['winner'] = os.path.join('.', 'assets', 'winer.jpg')
+        self.PATH['welcome'] = os.path.join('.', 'assets', 'welcome.jpg')
+        self.background = {}
 
     def load(self):
-        self.background = pygame.image.load(self.PATH).convert()
+        self.background['game'] = pygame.image.load(self.PATH['game']).convert()
+        self.background['winner'] = pygame.transform.scale(pygame.image.load(self.PATH['winner']).convert(), (1280,720))
+        self.background['welcome'] = pygame.transform.scale(pygame.image.load(self.PATH['welcome']).convert(), (1280,720))
         return self
 
 """

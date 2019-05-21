@@ -19,6 +19,7 @@ class Server:
 
         self.clients = []
         self.card_index = list(range(52))
+        # self.card_index = [0, 13, 26, 39, 1, 14, 27, 40, 2, 15, 28, 41, 3, 16, 29, 42, 4, 17, 30, 43, 5, 18, 31, 44, 6, 19, 32, 45, 7, 20, 33, 46, 8, 21, 34, 47, 9, 22, 35, 48, 10, 23, 36, 49, 11, 24, 37, 50, 12, 25, 38, 51]
         random.shuffle(self.card_index)
 
         self.game_data = {}
@@ -92,6 +93,11 @@ class Server:
                     if message['status'] == 'QUIT':
                         self.reply_ok(files)
                         input_list.remove(files)
+                        self.clients.remove(files)
+
+                        if len(self.clients) == 0:
+                            RUNNING = False
+                        
                     elif message['status'] == 'UPDATE' :
                         player_id = message['data']['id']
                         is_play = message['data']['play'] == 'PLAY'
@@ -116,6 +122,7 @@ class Server:
                                 winner_data = {}
                                 winner_data['player_id'] = player_id
                                 self.broadcast_winner(winner_data)
+                                RUNNING = False
 
                         else :
                             game_stack = queue.LifoQueue()
@@ -146,8 +153,8 @@ class Server:
                                     self.game_order.put(i)
 
                                 self.game_data['card_index_before'] = []
-                                self.game_data['card_point_before'] = []
-                                self.game_data['card_index_now'] = 0
+                                self.game_data['card_point_before'] = 0
+                                self.game_data['card_index_now'] = []
                                 self.game_data['card_point_now'] = 0
 
                                 self.game_data['turn_player_id'] = self.game_order.get()
@@ -156,7 +163,6 @@ class Server:
                                 self.game_data['turn_player_id'] = x
 
                         print(list(self.game_order.queue))
-                            
 
                         self.broadcast_game_data(self.game_data)
 
@@ -210,7 +216,6 @@ class Server:
             data_to_send_p['data']['player_id'] = player_id
             data_pickled = pickle.dumps(data_to_send_p)
             client_socket.send(data_pickled)
-
 
 
 if __name__ == "__main__":
