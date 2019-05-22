@@ -82,6 +82,8 @@ class Game:
         # initialize Rule class
         self.game_rule = ''
 
+        self.tutorial = pygame.image.load("./assets/tutorial-2.png").convert()
+
 
     def init_player_card(self):
         # check if card is loaded or not
@@ -282,9 +284,13 @@ class Game:
         waiting_font = self.font_factory.make_font(50)
         waiting_surface = waiting_font.render(waiting_text, 0, (255,255,255))
 
-        instruction_text = "Game will start as soon as the player count reach four".format(self.count_player)
+        instruction_text = "Game will start as soon as the player count reaches four"
         instruction_font = self.font_factory.make_font(30)
         instruction_surface = instruction_font.render(instruction_text, 0, (255,255,255))
+
+        question_mark = "?"
+        question_font = self.font_factory.make_font(30)
+        question_surface = question_font.render(question_mark, 0, (255,255,255))
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -299,6 +305,12 @@ class Game:
         self.screen.blit(player_surface,        (640 - player_surface.get_width()//2        , 250 - player_surface.get_height()//2))
         self.screen.blit(waiting_surface,       (640 - waiting_surface.get_width()//2       , 400 - waiting_surface.get_height()//2))
         self.screen.blit(instruction_surface,   (640 - instruction_surface.get_width()//2   , 470 - instruction_surface.get_height()//2))
+        self.screen.blit(question_surface,      (0,0))
+
+        qs = question_surface.get_rect()
+        if qs.collidepoint(pygame.mouse.get_pos()) : 
+            self.screen.blit(self.tutorial,  (640 - self.tutorial.get_width()//2 , 360 - self.tutorial.get_height()//2))
+
 
         pygame.display.update()
 
